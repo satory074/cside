@@ -31,12 +31,12 @@ def librosaRP(ga):
     plt.show()
 
 class Song:
-    def __init__(self, path):
+    def __init__(self, is_recalc, path):
         savepath ="/Users/satory43/Desktop/Programs/Python/py2/csi/data/song/"
 
         self.path = path
         self.filename = (path.split("/")[-1]).split(".")[0]
-        self.ifp = self._is_first_processing(savepath)
+        self.ifp = True if is_recalc else self._is_first_processing(savepath)
         self.h, self.g = self._path2g(savepath)
         self.htr = self.h
 
@@ -73,16 +73,17 @@ class Song:
 
 class SongPair:
 
-    def __init__(self, Song1, Song2):
+    def __init__(self, is_recalc, Song1, Song2):
         savepath ="/Users/satory43/Desktop/Programs/Python/py2/csi/data/songpair/"
 
         self.filename = Song1.filename + "_" + Song2.filename
-        self.ifp = self._is_first_processing(savepath)
+        self.ifp = True if is_recalc else self._is_first_processing(savepath)
         self.oti = self._calcOTI(Song1.g, Song2.g, savepath)
 
         Song1.htr = np.roll(Song1.h, -self.oti, axis=0)
 
-        self.crp = self._calcCRP(Song1.htr, Song2.h, savepath)
+        self.crp_r = self._calc_R(Song1.htr, Song2.h, savepath)
+        self.crp_L = self._calc_L()
 
     def _is_first_processing(self, savepath):
         for x in os.listdir(savepath + "oti/"):
@@ -122,7 +123,7 @@ class SongPair:
 
         return calc_mat
 
-    def _calcCRP(self, X1, X2, savepath):
+    def _calc_R(self, X1, X2, savepath):
         print ("##### " + self.filename + " CRP calculate...")
 
         if self.ifp:
@@ -152,6 +153,9 @@ class SongPair:
             crp = np.loadtxt(savepath + "crp/" + self.filename + ".csv", delimiter=',')
             return crp
 
+    def _calc_L(self):
+        pass
+
     def draw_heatmap(self, list_, xlabel="", ylabel=""):
         data = np.array(list_)
         sns.heatmap(data, vmin=0.0, vmax=1.0, xticklabels=True, yticklabels=True, cmap="Blues")
@@ -161,13 +165,14 @@ class SongPair:
         plt.show()
 
 
-def main(path1, path2):
-    song1 = Song(path1)
-    song2 = Song(path2)
+def main(is_recalc, path1, path2):
+    song1 = Song(is_recalc, path1)
+    song2 = Song(is_recalc, path2)
 
-    songpair = SongPair(song1, song2)
-    songpair.draw_heatmap(songpair.crp, song1.filename, song2.filename)
+    songpair = SongPair(is_recalc, song1, song2)
+    songpair.draw_heatmap(songpair.crp_r, song1.filename, song2.filename)
 
 
 if __name__ == '__main__':
-    main(sys.argv[1], sys.argv[2])
+    is_recalc = True if sys.argv[1]=='-recalc' else sys.argv[1]=='-calc'
+    main(is_recalc, sys.argv[2], sys.argv[3])
