@@ -32,7 +32,8 @@ def librosaRP(ga):
 
 class Song:
     def __init__(self, is_recalc, path):
-        savepath ="/Users/satory43/Desktop/Programs/Python/py2/csi/data/song/"
+        # savepath ="/Users/satory43/Desktop/Programs/Python/py2/csi/data/song/"
+        savepath = "/Volumes/satoriHD/data/song/"
 
         self.path = path
         self.filename = (path.split("/")[-1]).split(".")[0]
@@ -73,8 +74,14 @@ class Song:
 
 class SongPair:
 
-    def __init__(self, is_recalc, Song1, Song2):
-        savepath ="/Users/satory43/Desktop/Programs/Python/py2/csi/data/songpair/"
+    def __init__(self, is_recalc, s1, s2):
+        #savepath ="/Users/satory43/Desktop/Programs/Python/py2/csi/data/songpair/"
+        savepath = "/Volumes/satoriHD/data/songpair/"        
+
+        songs = [s1.filename, s2.filename]
+        songs.sort()
+        Song1 = s1 if s1.filename == songs[0] else s2
+        Song2 = s2 if s2.filename == songs[1] else s1
 
         self.filename = Song1.filename + "_" + Song2.filename
         self.ifp = True if is_recalc else self._is_first_processing(savepath)
@@ -82,8 +89,8 @@ class SongPair:
 
         Song1.htr = np.roll(Song1.h, -self.oti, axis=0)
 
-        self.crp_r = self._calc_R(Song1.htr, Song2.h, savepath)
-        self.crp_L = self._calc_L()
+        self.crp_R = self._calc_R(Song1.htr, Song2.h, savepath)
+        self.crp_L, self.Lmax = self._calc_L(savepath)
 
     def _is_first_processing(self, savepath):
         for x in os.listdir(savepath + "oti/"):
@@ -94,6 +101,8 @@ class SongPair:
         return True
 
     def _calcOTI(self, ga, gb, savepath):
+        oti = 0
+
         if self.ifp:
             csgb = gb
             dots = []
@@ -124,7 +133,8 @@ class SongPair:
         return calc_mat
 
     def _calc_R(self, X1, X2, savepath):
-        print ("##### " + self.filename + " CRP calculate...")
+        print ("##### " + self.filename + " matrix R calculate...")
+        crp_R = []
 
         if self.ifp:
             smm = []
@@ -137,28 +147,45 @@ class SongPair:
             row_heviside = self._calchev(smm)
             col_heviside = self._calchev(np.array(smm).T)
 
-            crp = []
             for i in range(len(row_heviside)):
                 row = []
                 for j in range(len(row_heviside[0])):
                     row.append(row_heviside[i][j] * col_heviside[j][i])
-                crp.append(row)
+                crp_R.append(row)
 
-            crp = crp[::-1]
+            crp_R = crp_R[::-1]
 
-            np.savetxt(savepath + "crp/" + self.filename + ".csv", crp, delimiter=',')
-
-            return crp
+            np.savetxt(savepath + "crp_R/" + self.filename + ".csv", crp_R, delimiter=',')
         else:
-            crp = np.loadtxt(savepath + "crp/" + self.filename + ".csv", delimiter=',')
-            return crp
+            crp_R = np.loadtxt(savepath + "crp_R/" + self.filename + ".csv", delimiter=',')
 
-    def _calc_L(self):
-        pass
+        return crp_R
+
+    def _calc_L(self, savepath):
+        print ("##### " + self.filename + " matrix L calculate...")
+        crp_L = np.array(self.crp_R)
+
+        if self.ifp:
+            crp_L[:,:] = 0
+
+            for i in range(1, len(crp_L)):
+                for j in range(1, len(crp_L[0])):
+                    crp_L[i][j] = crp_L[i-1][j-1] + 1 if self.crp_R[i][j] == 1 else 0
+
+            np.savetxt(savepath + "crp_L/" + self.filename + ".csv", crp_L, delimiter=',')
+        else:
+            crp_L = np.loadtxt(savepath + "crp_L/" + self.filename + ".csv", delimiter=',')
+
+        Lmax = int(crp_L.max())
+        f = open(savepath + "Lmax/" + self.filename + '.txt', 'w')
+        f.write(str(Lmax))
+        f.close()
+        print "Lmax: " + str(Lmax)
+        return crp_L, Lmax
 
     def draw_heatmap(self, list_, xlabel="", ylabel=""):
         data = np.array(list_)
-        sns.heatmap(data, vmin=0.0, vmax=1.0, xticklabels=True, yticklabels=True, cmap="Blues")
+        sns.heatmap(data, xticklabels=True, yticklabels=True, cmap="Blues")
         plt.xlabel(xlabel)
         plt.ylabel(ylabel)
         print ("##### heatmap showing...")
@@ -170,9 +197,31 @@ def main(is_recalc, path1, path2):
     song2 = Song(is_recalc, path2)
 
     songpair = SongPair(is_recalc, song1, song2)
-    songpair.draw_heatmap(songpair.crp_r, song1.filename, song2.filename)
+    # songpair.draw_heatmap(songpair.crp_R, song1.filename, song2.filename)
+    # songpair.draw_heatmap(songpair.crp_L, song1.filename, song2.filename)
+
+def main2():
+    PATH = "/Users/satory43/Desktop/Programs/data/coversongs/covers32k/"
+    path1 = "/Users/satory43/Desktop/Programs//data/coversongs/covers32k/Yesterday/beatles+1+11-Yesterday.mp3"
+    song1 = Song(True, path1)
+
+    for pdir in os.listdir(PATH):
+        pdirname = PATH + pdir
+        if os.path.isdir(pdirname):
+            for cdir in os.listdir(pdirname):
+                cdirname = pdirname + "/" + cdir
+                if os.path.isfile(cdirname):
+                    path2 = cdirname
+                    song2 = Song(True, path2)
+
+                    songpair = SongPair(True, song1, song2)
+                print ""
+        print "---"
+
+
 
 
 if __name__ == '__main__':
-    is_recalc = True if sys.argv[1]=='-recalc' else sys.argv[1]=='-calc'
-    main(is_recalc, sys.argv[2], sys.argv[3])
+    #is_recalc = True if sys.argv[1]=='-recalc' else False
+    #main(is_recalc, sys.argv[2], sys.argv[3])
+    main2()
