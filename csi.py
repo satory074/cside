@@ -8,6 +8,7 @@ import numpy as np
 from scipy import stats
 import csv
 import math
+import re
 
 k = 0.1
 
@@ -36,7 +37,7 @@ class Song:
         savepath = "/Volumes/satoriHD/data/song/"
 
         self.path = path
-        self.filename = (path.split("/")[-1]).split(".")[0]
+        self.filename = (os.path.splitext(path)[0]).split("/")[-1]
         self.ifp = True if is_recalc else self._is_first_processing(savepath)
         self.h, self.g = self._path2g(savepath)
         self.htr = self.h
@@ -55,7 +56,7 @@ class Song:
         if self.ifp:
             # extract chroma
             y, sr = librosa.load(self.path)
-            chroma_cq = librosa.feature.chroma_cqt(y=y, sr=sr)
+            chroma_cq = librosa.feature.chroma_cqt(y=y, sr=sr)[:, :500]
 
             ha_sum = np.sum(chroma_cq, axis=1)
             g = ha_sum / np.max(ha_sum)
@@ -73,10 +74,9 @@ class Song:
             return chroma_cq, g
 
 class SongPair:
-
     def __init__(self, is_recalc, s1, s2):
         #savepath ="/Users/satory43/Desktop/Programs/Python/py2/csi/data/songpair/"
-        savepath = "/Volumes/satoriHD/data/songpair/"        
+        savepath = "/Volumes/satoriHD/data/songpair/"
 
         songs = [s1.filename, s2.filename]
         songs.sort()
@@ -85,15 +85,24 @@ class SongPair:
 
         self.filename = Song1.filename + "_" + Song2.filename
         self.ifp = True if is_recalc else self._is_first_processing(savepath)
+        print ("is_first_processing: " + str(self.ifp))
         self.oti = self._calcOTI(Song1.g, Song2.g, savepath)
 
-        Song1.htr = np.roll(Song1.h, -self.oti, axis=0)
+        Song1.htr = np.roll(Song1.h, self.oti, axis=0)
 
         self.crp_R = self._calc_R(Song1.htr, Song2.h, savepath)
         self.crp_L, self.Lmax = self._calc_L(savepath)
+        self.crp_S, self.Smax = self._calc_S(savepath)
+        self.crp_Q, self.Qmax = self._calc_Q(savepath)
+
+        f = open(savepath + 'LSQmax/' + self.filename + '.txt', 'w')
+        f.write(str(self.Lmax) + ", " + str(self.Smax) + ", " + str(self.Qmax))
+        f.close()
 
     def _is_first_processing(self, savepath):
+        print (self.filename)
         for x in os.listdir(savepath + "oti/"):
+            print (x.split(".")[0])
             if os.path.isfile(savepath + "oti/" + x):
                 if x.split(".")[0] == self.filename:
                     return False
@@ -177,11 +186,57 @@ class SongPair:
             crp_L = np.loadtxt(savepath + "crp_L/" + self.filename + ".csv", delimiter=',')
 
         Lmax = int(crp_L.max())
-        f = open(savepath + "Lmax/" + self.filename + '.txt', 'w')
-        f.write(str(Lmax))
-        f.close()
         print "Lmax: " + str(Lmax)
         return crp_L, Lmax
+
+    def _calc_S(self, savepath):
+        print ("##### " + self.filename + " matrix S calculate...")
+        crp_S = np.array(self.crp_R)
+
+        if self.ifp:
+            crp_S[:,:] = 0
+
+            for i in range(2, len(crp_S)):
+                for j in range(2, len(crp_S[0])):
+                    if self.crp_R[i][j] == 1:
+                        crp_S[i][j] = max(crp_S[i-1][j-1], crp_S[i-2][j-1], crp_S[i-1][j-2]) + 1
+                    else:
+                        crp_S[i][j] = 0
+
+            np.savetxt(savepath + "crp_S/" + self.filename + ".csv", crp_S, delimiter=',')
+        else:
+            crp_S = np.loadtxt(savepath + "crp_S/" + self.filename + ".csv", delimiter=',')
+
+        Smax = int(crp_S.max())
+        print "Smax: " + str(Smax)
+        return crp_S, Smax
+
+    def _calc_Q(self, savepath):
+        print ("##### " + self.filename + " matrix Q calculate...")
+        crp_Q = np.array(self.crp_R)
+        gamma_o = 5
+        gamma_e = 0.5
+
+        if self.ifp:
+            crp_Q[:,:] = 0
+
+            for i in range(2, len(crp_Q)):
+                for j in range(2, len(crp_Q[0])):
+                    if self.crp_R[i][j] == 1:
+                        crp_Q[i][j] = max(crp_Q[i-1][j-1], crp_Q[i-2][j-1], crp_Q[i-1][j-2]) + 1
+                    else:
+                        crp_Q[i][j] = max(0,
+                        crp_Q[i-1][j-1] - (gamma_o if self.crp_R[i-1][j-1] == 1 else gamma_e),
+                        crp_Q[i-2][j-1] - (gamma_o if self.crp_R[i-2][j-1] == 1 else gamma_e),
+                        crp_Q[i-1][j-2] - (gamma_o if self.crp_R[i-1][j-2] == 1 else gamma_e))
+
+            np.savetxt(savepath + "crp_Q/" + self.filename + ".csv", crp_Q, delimiter=',')
+        else:
+            crp_Q = np.loadtxt(savepath + "crp_Q/" + self.filename + ".csv", delimiter=',')
+
+        Qmax = int(crp_Q.max())
+        print "Qmax: " + str(Qmax)
+        return crp_Q, Qmax
 
     def draw_heatmap(self, list_, xlabel="", ylabel=""):
         data = np.array(list_)
@@ -197,31 +252,39 @@ def main(is_recalc, path1, path2):
     song2 = Song(is_recalc, path2)
 
     songpair = SongPair(is_recalc, song1, song2)
-    # songpair.draw_heatmap(songpair.crp_R, song1.filename, song2.filename)
-    # songpair.draw_heatmap(songpair.crp_L, song1.filename, song2.filename)
+    songpair.draw_heatmap(songpair.crp_R, song1.filename, song2.filename)
+    songpair.draw_heatmap(songpair.crp_L, song1.filename, song2.filename)
+    songpair.draw_heatmap(songpair.crp_S, song1.filename, song2.filename)
+    songpair.draw_heatmap(songpair.crp_Q, song1.filename, song2.filename)
 
-def main2():
-    PATH = "/Users/satory43/Desktop/Programs/data/coversongs/covers32k/"
-    path1 = "/Users/satory43/Desktop/Programs//data/coversongs/covers32k/Yesterday/beatles+1+11-Yesterday.mp3"
-    song1 = Song(True, path1)
+def main2(is_recalc, PATH, path1):
+    #PATH = "/Users/satory43/Desktop/Programs/data/csi_test/"
+    #path1 = "/Users/satory43/Desktop/Programs//data/csi_test/01_120.mp3"
+    song1 = Song(is_recalc, path1)
 
     for pdir in os.listdir(PATH):
         pdirname = PATH + pdir
-        if os.path.isdir(pdirname):
-            for cdir in os.listdir(pdirname):
-                cdirname = pdirname + "/" + cdir
-                if os.path.isfile(cdirname):
-                    path2 = cdirname
-                    song2 = Song(True, path2)
+        if os.path.isfile(pdirname):
+            #for cdir in os.listdir(pdirname):
+            #    cdirname = pdirname + "/" + cdir
+            #    if os.path.isfile(cdirname):
+            #        path2 = cdirname
+            #        song2 = Song(True, path2)
 
-                    songpair = SongPair(True, song1, song2)
-                print ""
+            #        songpair = SongPair(True, song1, song2)
+            #    print ""
+
+            if os.path.splitext(pdirname)[1] == ".mp3":
+                path2 = pdirname
+                song2 = Song(is_recalc, path2)
+
+                songpair = SongPair(is_recalc, song1, song2)
         print "---"
 
 
 
 
 if __name__ == '__main__':
-    #is_recalc = True if sys.argv[1]=='-recalc' else False
-    #main(is_recalc, sys.argv[2], sys.argv[3])
-    main2()
+    is_recalc = True if sys.argv[1]=='-recalc' else False
+    main(is_recalc, sys.argv[2], sys.argv[3])
+    #main2(is_recalc, sys.argv[2], sys.argv[3])
