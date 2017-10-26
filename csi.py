@@ -2,13 +2,14 @@ import librosa.display
 import sys
 import os
 
-import matplotlib.pyplot as plt
-import seaborn as sns
 import numpy as np
 from scipy import stats
 import csv
 import math
 import re
+
+import draw_heatmap
+
 
 k = 0.1
 
@@ -30,6 +31,7 @@ def librosaRP(ga):
     plt.title('Affinity recurrence')
     plt.tight_layout()
     plt.show()
+
 
 class Song:
     def __init__(self, is_recalc, path):
@@ -56,7 +58,7 @@ class Song:
         if self.ifp:
             # extract chroma
             y, sr = librosa.load(self.path)
-            chroma_cq = librosa.feature.chroma_cqt(y=y, sr=sr)[:, :500]
+            chroma_cq = librosa.feature.chroma_cqt(y=y, sr=sr)
 
             ha_sum = np.sum(chroma_cq, axis=1)
             g = ha_sum / np.max(ha_sum)
@@ -100,9 +102,7 @@ class SongPair:
         f.close()
 
     def _is_first_processing(self, savepath):
-        print (self.filename)
         for x in os.listdir(savepath + "oti/"):
-            print (x.split(".")[0])
             if os.path.isfile(savepath + "oti/" + x):
                 if x.split(".")[0] == self.filename:
                     return False
@@ -162,7 +162,7 @@ class SongPair:
                     row.append(row_heviside[i][j] * col_heviside[j][i])
                 crp_R.append(row)
 
-            crp_R = crp_R[::-1]
+            #crp_R = crp_R[::-1]
 
             np.savetxt(savepath + "crp_R/" + self.filename + ".csv", crp_R, delimiter=',')
         else:
@@ -238,24 +238,17 @@ class SongPair:
         print "Qmax: " + str(Qmax)
         return crp_Q, Qmax
 
-    def draw_heatmap(self, list_, xlabel="", ylabel=""):
-        data = np.array(list_)
-        sns.heatmap(data, xticklabels=True, yticklabels=True, cmap="Blues")
-        plt.xlabel(xlabel)
-        plt.ylabel(ylabel)
-        print ("##### heatmap showing...")
-        plt.show()
-
 
 def main(is_recalc, path1, path2):
     song1 = Song(is_recalc, path1)
     song2 = Song(is_recalc, path2)
 
     songpair = SongPair(is_recalc, song1, song2)
-    songpair.draw_heatmap(songpair.crp_R, song1.filename, song2.filename)
-    songpair.draw_heatmap(songpair.crp_L, song1.filename, song2.filename)
-    songpair.draw_heatmap(songpair.crp_S, song1.filename, song2.filename)
-    songpair.draw_heatmap(songpair.crp_Q, song1.filename, song2.filename)
+    draw_heatmap.draw(songpair.crp_R, xlabel=song2.filename, ylabel=song1.filename,
+                        x_axis='time', y_axis='time')
+    #songpair.draw_heatmap(songpair.crp_L, song1.filename, song2.filename)
+    #songpair.draw_heatmap(songpair.crp_S, song1.filename, song2.filename)
+    #songpair.draw_heatmap(songpair.crp_Q, song1.filename, song2.filename)
 
 def main2(is_recalc, PATH, path1):
     #PATH = "/Users/satory43/Desktop/Programs/data/csi_test/"
@@ -280,8 +273,6 @@ def main2(is_recalc, PATH, path1):
 
                 songpair = SongPair(is_recalc, song1, song2)
         print "---"
-
-
 
 
 if __name__ == '__main__':
