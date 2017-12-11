@@ -21,8 +21,8 @@ def cos_sim(v1, v2):
 
 class SongPair:
     def __init__(self, is_recalc, s1, s2):
-        #savepath ="/Users/satory43/Desktop/Programs/Python/py2/csi/data/songpair/"
-        savepath = "/Volumes/satoriHD/data/songpair/"
+        savepath ="/Users/satory43/Desktop/Programs/Python/py2/csi/data/songpair/"
+        #savepath = "/Volumes/satoriHD/data/songpair/"
 
         songs = [s1.filename, s2.filename]
         songs.sort()
@@ -34,9 +34,10 @@ class SongPair:
         print ("is_first_processing: " + str(self.ifp))
         self.oti = self._calcOTI(Song1.g, Song2.g, savepath)
 
-        Song1.htr = np.roll(Song1.h, self.oti, axis=0)
+        #Song1.htr = np.roll(Song1.h, self.oti, axis=0)
+        Song1.htr = np.roll(Song1.peaks, self.oti, axis=0)
 
-        self.crp_R = self._calc_R(Song1.htr, Song2.h, savepath)
+        self.crp_R = self._calc_R(Song1.htr, Song2.peaks, savepath)
         self.crp_L, self.Lmax = self._calc_L(savepath)
         self.crp_S, self.Smax = self._calc_S(savepath)
         self.crp_Q, self.Qmax = self._calc_Q(savepath)
