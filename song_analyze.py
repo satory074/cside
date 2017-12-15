@@ -4,22 +4,6 @@ import scipy.signal
 import librosa
 
 
-# Not maintenance yet
-def librosaRP(ga):
-    import matplotlib.pyplot as plt
-    R = librosa.segment.recurrence_matrix(ga, metric='cosine')
-    R_aff = librosa.segment.recurrence_matrix(ga, mode='affinity')
-
-    plt.figure(figsize=(8, 4))
-    plt.subplot(1, 2, 1)
-    librosa.display.specshow(R, x_axis='time', y_axis='time')
-    plt.title('Binary recurrence (symmetric)')
-    plt.subplot(1, 2, 2)
-    librosa.display.specshow(R_aff, x_axis='time', y_axis='time', cmap='magma_r')
-    plt.title('Affinity recurrence')
-    plt.tight_layout()
-    plt.show()
-
 def locmax(vec, indices=False):
     """
     Return a boolean vector of which points in vec are local maxima.
@@ -51,10 +35,7 @@ class Song:
     __sp_len = None
     __sp_vals = []
 
-    def __init__(self, is_recalc, path):
-        savepath ="/Users/satory43/Desktop/Programs/Python/py2/csi/data/song/"
-        # savepath = "/Volumes/satoriHD/data/song/"
-
+    def __init__(self, path, feature):
         self.density = DENSITY
         self.n_fft = N_FFT
         self.n_hop = N_HOP
@@ -64,19 +45,10 @@ class Song:
         self.maxpksperframe = 50
 
         self.path = path
+        self.feature = feature
         self.filename = (os.path.splitext(path)[0]).split("/")[-1]
-        self.ifp = True if is_recalc else self._is_first_processing(savepath)
-        self.h, self.g, self.peaks = self._path2g(savepath)
+        self.h, self.g = self._path2g(feature)
         self.htr = self.h
-
-
-    def _is_first_processing(self, savepath):
-        for x in os.listdir(savepath + "chroma/"):
-            if os.path.isfile(savepath + "chroma/" + x):
-                if x.split(".")[0] == self.filename:
-                    return False
-
-        return True
 
     def spreadpeaksinvector(self, vector, width=4.0):
         """
@@ -254,27 +226,24 @@ class Song:
         peaklists = []
         return self.find_peaks(y, sr)
 
-    def _path2g(self, savepath):
-        print ("##### " + self.filename + " load...")
+    def _path2g(self, feature):
+        print ("### " + self.filename + " load...")
 
-        if self.ifp:
-            # extract chroma
-            y, sr = librosa.load(self.path)
-            chroma_cq = librosa.feature.chroma_cqt(y=y, sr=sr)
+        # extract chroma
+        y, sr = librosa.load(self.path)
+        chroma_cqt = librosa.feature.chroma_cqt(y=y, sr=sr)
 
-            ha_sum = np.sum(chroma_cq, axis=1)
-            g = ha_sum / np.max(ha_sum)
+        ha_sum = np.sum(chroma_cqt, axis=1)
+        g = ha_sum / np.max(ha_sum)
 
-            peaks = self.wavfile2peaks(y, sr)
+        h = []
+        if feature == 'chroma':
+            h = chroma_cqt
+        if feature == 'cqt':
+            h = librosa.cqt(y, sr=sr)
+        if feature == 'mfcc':
+            h = librosa.feature.mfcc(y=y, sr=sr)
+        if feature == 'peak':
+            h = self.wavfile2peaks(y, sr)
 
-            # output
-            np.savetxt(savepath + "chroma/" + self.filename + ".csv", chroma_cq, delimiter=',')
-            np.savetxt(savepath + "exchroma/" + self.filename + ".csv", g, delimiter=',')
-
-            return chroma_cq, g, peaks
-        else:
-            # finding same file
-            chroma_cq = np.loadtxt(savepath + "chroma/" + self.filename + ".csv", delimiter=',')
-            g = np.loadtxt(savepath + "exchroma/" + self.filename + ".csv", delimiter=',')
-
-            return chroma_cq, g
+        return h, g

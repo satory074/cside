@@ -9,7 +9,6 @@ import sys
 def main(path):
     # This is how we load audio using Librosa
     audio, sr = librosa.load(path, sr=44100, mono=True)
-    params = {"minfqr": 50.0, "maxfqr": 1800.0, "voicing":0.2, "minpeaksalience": 0}
     data = vamp.collect(audio, sr, "mtg-melodia:melodia")
 
     # vector is a tuple of two values: the hop size used for analysis and the array of pitch values
