@@ -3,12 +3,12 @@ import numpy as np
 import song_analyze
 
 class SongPair:
-    def __init__(self, paths, feature, cpr, matrices):
-        self.song1 = song_analyze.Song(paths[0], feature)
-        self.song2 = song_analyze.Song(paths[1], feature)
+    def __init__(self, paths, feature, cpr, matrices, is_extract):
+        self.song1 = song_analyze.Song(paths[0], feature, is_extract)
+        self.song2 = song_analyze.Song(paths[1], feature, is_extract)
 
-        self.oti = self._calcOTI(self.song1.g, self.song2.g)
-        #self.oti = 0
+        #self.oti = self._calcOTI(self.song1.g, self.song2.g)
+        self.oti = 0
 
         self.song1.htr = np.roll(self.song1.h, self.oti, axis=0)
         print
@@ -43,7 +43,7 @@ class SongPair:
         for n1 in mat:
             sortedlist = np.sort(n1)
             epsiron = sortedlist[int(len(sortedlist) * cpr)]
-            calc_mat.append(np.where(n1 < epsiron, 1, 0))
+            calc_mat.append(np.where(n1 <= epsiron, 1, 0))
 
         return calc_mat
 
@@ -86,6 +86,69 @@ class SongPair:
         print
         return crp_L, Lmax
 
+    def findsegstartSQ(self, crp_R, crp_SQ, SQmax, segends, gamma_o, gamma_e):
+        segstarts = [] # segment start points
+        junction = []
+        history = [] # already searched points
+        for segend in segends:
+            print (segend)
+            pivot_x, pivot_y = segend
+            pivotSQmax = SQmax
+
+            is_search = True
+            ntry = 0
+            while is_search == True:
+                if (pivot_x, pivot_y, pivotSQmax) in history:
+                    if len(junction) == 0:
+                        is_search = False
+                        break
+                    else:
+                        pivot_x, pivot_y, pivotSQmax = junction.pop(0)
+
+                if pivotSQmax == 0:
+                    segstarts.append((pivot_x, pivot_y))
+                elif pivotSQmax < 0:
+                    print ((pivot_x, pivot_y, pivotSQmax))
+                    print("pivotSQmax is under zero!!!")
+                    exit()
+
+                history.append((pivot_x, pivot_y, pivotSQmax))
+                look = [(pivot_x - 1, pivot_y - 1),
+                    (pivot_x - 1, pivot_y - 2),
+                    (pivot_x - 2, pivot_y - 1)]
+
+                candidate = []
+                for (i, j) in look:
+                    if crp_R[pivot_x][pivot_y] == 1:
+                        calcedSQmax = pivotSQmax - 1
+                    else:
+                        calcedSQmax = pivotSQmax + (gamma_o if crp_R[i][j] == 1 else gamma_e)
+
+                    #print (calcedSQmax, crp_SQ[i][j])
+                    if calcedSQmax == crp_SQ[i][j]:
+                        candidate.append((i, j, calcedSQmax))
+
+                if len(candidate) == 0:
+                    print (candidate)
+                    print ("candidate list is enpty! Nandeya!!")
+                    exit()
+
+                pivot_x, pivot_y, pivotSQmax = candidate.pop(0)
+
+                if len(candidate) != 0:
+                    junction += candidate
+
+                ntry += 1
+
+                # end condition
+                if ntry == 1000000:
+                    print ("Run Time Error.")
+                    print (len(junction))
+                    exit()
+
+        return segstarts
+
+
     def _calc_SQ(self, gamma_o=float("inf"), gamma_e=float("inf")):
         matlabel = 'S' if gamma_o == float("inf") else 'Q'
         print ("### matrix " + matlabel + " calculate...")
@@ -104,6 +167,16 @@ class SongPair:
                     crp_SQ[i-1][j-2] - (gamma_o if self.crp_R[i-1][j-2] == 1 else gamma_e))
 
         SQmax = int(crp_SQ.max())
+
+        segends = []
+        for list_ in np.argwhere(crp_SQ == SQmax):
+            segends.append((list_[0], list_[1]))
+
+        segstarts = self.findsegstartSQ(self.crp_R, crp_SQ, SQmax, segends, gamma_o, gamma_e)
+
+
         print matlabel + "max: " + str(SQmax)
+        print matlabel + "start: " + str(segstarts)
+        print matlabel + "end: " + str(segends)
         print
         return crp_SQ, SQmax
