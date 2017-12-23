@@ -1,11 +1,12 @@
+# coding: utf-8
 import numpy as np
 
 import song_analyze
 
 class SongPair:
-    def __init__(self, paths, feature, cpr, matrices, is_extract):
-        self.song1 = song_analyze.Song(paths[0], feature, is_extract)
-        self.song2 = song_analyze.Song(paths[1], feature, is_extract)
+    def __init__(self, paths, feature, cpr, matrices, is_extract, is_decompose):
+        self.song1 = song_analyze.Song(paths[0], feature, is_extract, is_decompose)
+        self.song2 = song_analyze.Song(paths[1], feature, is_extract, is_decompose)
 
         #self.oti = self._calcOTI(self.song1.g, self.song2.g)
         self.oti = 0
@@ -21,7 +22,7 @@ class SongPair:
         if 's' in matrices:
             self.crp_S, self.Smax = self._calc_SQ()
         if 'q' in matrices:
-            self.crp_Q, self.Qmax = self._calc_SQ(gamma_o=5, gamma_e=0.5)
+            self.crp_Q, self.Qmax = self._calc_SQ(gamma_o=5.0, gamma_e=0.5)
 
 
     def _calcOTI(self, ga, gb):
@@ -91,7 +92,6 @@ class SongPair:
         junction = []
         history = [] # already searched points
         for segend in segends:
-            print (segend)
             pivot_x, pivot_y = segend
             pivotSQmax = SQmax
 
@@ -106,16 +106,25 @@ class SongPair:
                         pivot_x, pivot_y, pivotSQmax = junction.pop(0)
 
                 if pivotSQmax == 0:
-                    segstarts.append((pivot_x, pivot_y))
+                    if (pivot_x, pivot_y) not in segstarts:
+                        segstarts.append((pivot_x, pivot_y))
+
+                    if len(junction) == 0:
+                        is_search = False
+                        break
+                    else:
+                        pivot_x, pivot_y, pivotSQmax = junction.pop(0)
+                        continue
+
                 elif pivotSQmax < 0:
-                    print ((pivot_x, pivot_y, pivotSQmax))
-                    print("pivotSQmax is under zero!!!")
+                    print (pivotSQmax)
+                    print ("pivotSQmax is zero!!")
                     exit()
 
                 history.append((pivot_x, pivot_y, pivotSQmax))
                 look = [(pivot_x - 1, pivot_y - 1),
-                    (pivot_x - 1, pivot_y - 2),
-                    (pivot_x - 2, pivot_y - 1)]
+                    (pivot_x - 2, pivot_y - 1),
+                    (pivot_x - 1, pivot_y - 2)]
 
                 candidate = []
                 for (i, j) in look:
@@ -123,13 +132,13 @@ class SongPair:
                         calcedSQmax = pivotSQmax - 1
                     else:
                         calcedSQmax = pivotSQmax + (gamma_o if crp_R[i][j] == 1 else gamma_e)
-
-                    #print (calcedSQmax, crp_SQ[i][j])
+                        
                     if calcedSQmax == crp_SQ[i][j]:
                         candidate.append((i, j, calcedSQmax))
+                print
 
                 if len(candidate) == 0:
-                    print (candidate)
+                    print (ntry)
                     print ("candidate list is enpty! Nandeya!!")
                     exit()
 
@@ -153,20 +162,19 @@ class SongPair:
         matlabel = 'S' if gamma_o == float("inf") else 'Q'
         print ("### matrix " + matlabel + " calculate...")
 
-        crp_SQ = np.array(self.crp_R)
-        crp_SQ[:,:] = 0
+        crp_SQ = np.zeros((len(self.crp_R), len(self.crp_R[0])))
 
         for i in range(2, len(crp_SQ)):
             for j in range(2, len(crp_SQ[0])):
                 if self.crp_R[i][j] == 1:
-                    crp_SQ[i][j] = max(crp_SQ[i-1][j-1], crp_SQ[i-2][j-1], crp_SQ[i-1][j-2]) + 1
+                    crp_SQ[i][j] = max(crp_SQ[i-1][j-1], crp_SQ[i-2][j-1], crp_SQ[i-1][j-2]) + 1.0
                 else:
                     crp_SQ[i][j] = max(0,
                     crp_SQ[i-1][j-1] - (gamma_o if self.crp_R[i-1][j-1] == 1 else gamma_e),
                     crp_SQ[i-2][j-1] - (gamma_o if self.crp_R[i-2][j-1] == 1 else gamma_e),
                     crp_SQ[i-1][j-2] - (gamma_o if self.crp_R[i-1][j-2] == 1 else gamma_e))
 
-        SQmax = int(crp_SQ.max())
+        SQmax = crp_SQ.max()
 
         segends = []
         for list_ in np.argwhere(crp_SQ == SQmax):
