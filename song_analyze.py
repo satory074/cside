@@ -1,8 +1,10 @@
-import os
-import numpy as np
-import scipy.signal
+# coding: utf-8
 import librosa
+import numpy as np
+import os
+import scipy.signal
 
+import melody_extraction as meloext
 
 def locmax(vec, indices=False):
     """
@@ -35,7 +37,7 @@ class Song:
     __sp_len = None
     __sp_vals = []
 
-    def __init__(self, path, feature):
+    def __init__(self, path, feature, is_extract, is_decompose):
         self.density = DENSITY
         self.n_fft = N_FFT
         self.n_hop = N_HOP
@@ -47,7 +49,7 @@ class Song:
         self.path = path
         self.feature = feature
         self.filename = (os.path.splitext(path)[0]).split("/")[-1]
-        self.h, self.g = self._path2g(feature)
+        self.h, self.g = self._path2g(feature, is_extract, is_decompose)
         self.htr = self.h
 
     def spreadpeaksinvector(self, vector, width=4.0):
@@ -226,7 +228,7 @@ class Song:
         peaklists = []
         return self.find_peaks(y, sr)
 
-    def _path2g(self, feature):
+    def _path2g(self, feature, is_extract, is_decompose):
         print ("### " + self.filename + " load...")
 
         # extract chroma
@@ -236,7 +238,10 @@ class Song:
         ha_sum = np.sum(chroma_cqt, axis=1)
         g = ha_sum / np.max(ha_sum)
 
-        h = []
+        if is_extract:
+            h = meloext.extract(y, sr, is_decompose)
+            return h, g
+
         if feature == 'chroma':
             h = chroma_cqt
         if feature == 'cqt':

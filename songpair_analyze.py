@@ -7,9 +7,10 @@ class SongPair:
     def __init__(self, paths, feature, cpr, matrices, is_extract, is_decompose):
         self.song1 = song_analyze.Song(paths[0], feature, is_extract, is_decompose)
         self.song2 = song_analyze.Song(paths[1], feature, is_extract, is_decompose)
+        self.filename = self.song1.filename + "_" + self.song2.filename
 
         #self.oti = self._calcOTI(self.song1.g, self.song2.g)
-        self.oti = 0
+        self.oti = -6
 
         self.song1.htr = np.roll(self.song1.h, self.oti, axis=0)
         print
@@ -18,11 +19,28 @@ class SongPair:
         self.crp_R = self._calc_R(self.song1.htr, self.song2.h, cpr)
 
         if 'l' in matrices:
-            self.crp_L, self.Lmax = self._calc_L()
+            self.crp_L, self.Lmax, self.segstarts_L, self.segends_L = self._calc_L()
+        else:
+            self.crp_L = []
+            self.Lmax = None
+            self.segstarts_L = None
+            self.segends_L = None
+
         if 's' in matrices:
-            self.crp_S, self.Smax = self._calc_SQ()
+            self.crp_S, self.Smax, self.segstarts_S, self.segends_S = self._calc_SQ()
+        else:
+            self.crp_S = []
+            self.Smax = None
+            self.segstarts_S = None
+            self.segends_S = None
+
         if 'q' in matrices:
-            self.crp_Q, self.Qmax = self._calc_SQ(gamma_o=5.0, gamma_e=0.5)
+            self.crp_Q, self.Qmax, self.segstarts_Q, self.segends_Q = self._calc_SQ(gamma_o=5.0, gamma_e=0.5)
+        else:
+            self.crp_Q = []
+            self.Qmax = None
+            self.segstarts_Q = None
+            self.segends_Q = None
 
 
     def _calcOTI(self, ga, gb):
@@ -88,6 +106,7 @@ class SongPair:
         return crp_L, Lmax
 
     def findsegstartSQ(self, crp_R, crp_SQ, SQmax, segends, gamma_o, gamma_e):
+        print ("######find SQstart...")
         segstarts = [] # segment start points
         junction = []
         history = [] # already searched points
@@ -132,10 +151,9 @@ class SongPair:
                         calcedSQmax = pivotSQmax - 1
                     else:
                         calcedSQmax = pivotSQmax + (gamma_o if crp_R[i][j] == 1 else gamma_e)
-                        
+
                     if calcedSQmax == crp_SQ[i][j]:
                         candidate.append((i, j, calcedSQmax))
-                print
 
                 if len(candidate) == 0:
                     print (ntry)
@@ -149,8 +167,11 @@ class SongPair:
 
                 ntry += 1
 
+
+                if ntry % 500 == 0:
+                    print ("    " + str(ntry) + " times")
                 # end condition
-                if ntry == 1000000:
+                if ntry == 100000000:
                     print ("Run Time Error.")
                     print (len(junction))
                     exit()
@@ -187,4 +208,4 @@ class SongPair:
         print matlabel + "start: " + str(segstarts)
         print matlabel + "end: " + str(segends)
         print
-        return crp_SQ, SQmax
+        return crp_SQ, SQmax, segstarts, segends
