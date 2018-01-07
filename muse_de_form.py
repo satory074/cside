@@ -56,8 +56,9 @@ def main(argv):
     draw_heatmap.draw(songpair.crp_R, xlabel=songpair.song2.filename, ylabel=songpair.song1.filename,
                         x_axis='time', y_axis='time')
 
-    output = [songpair.song1.filename, songpair.song2.filename, feature, cpr,
-            is_decompose, is_extract, songpair.Lmax, songpair.segstarts_L, songpair.segends_L,
+    output = [songpair.song1.filename, len(songpair.crp_R), songpair.song2.filename, len(songpair.crp_R[0]),
+            songpair.oti, feature, cpr, is_decompose, is_extract,
+            songpair.Lmax, songpair.segstarts_L, songpair.segends_L,
             songpair.Smax, songpair.segstarts_S, songpair.segends_S,
             songpair.Qmax, songpair.segstarts_Q, songpair.segends_Q]
     f = open("output/" + songpair.filename + '.txt', 'w')

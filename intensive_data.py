@@ -15,9 +15,9 @@ def main(path):
             list_.append(x.rstrip("\n"))
         f.close()
         data.append(list_)
-    print (data)
     df = pd.DataFrame(data,
-    columns=['Medley', 'Song', 'Feature', 'CRPrate', 'is_decompose', 'is_extract',
+    columns=['Name', 'length', 'Name', 'length',
+            'OTI', 'Feature', 'CRPrate', 'is_decompose', 'is_extract',
             'Lmax', 'segstarts_L', 'segends_L',
             'Smax', 'segstarts_S', 'segends_S',
             'Qmax', 'segstarts_Q', 'segends_Q'])

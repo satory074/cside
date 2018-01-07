@@ -10,7 +10,7 @@ class SongPair:
         self.filename = self.song1.filename + "_" + self.song2.filename
 
         #self.oti = self._calcOTI(self.song1.g, self.song2.g)
-        self.oti = -6
+        self.oti = 0
 
         self.song1.htr = np.roll(self.song1.h, self.oti, axis=0)
         print
@@ -86,6 +86,9 @@ class SongPair:
             for j in range(len(row_heviside[0])):
                 row.append(row_heviside[i][j] * col_heviside[j][i])
             crp_R.append(row)
+
+            if i % 500 == 0:
+                print (str(i) + "/" + str(len(row_heviside)))
 
         #crp_R = crp_R[::-1]
 
@@ -168,8 +171,8 @@ class SongPair:
                 ntry += 1
 
 
-                if ntry % 500 == 0:
-                    print ("    " + str(ntry) + " times")
+                if ntry % 5000 == 0:
+                    print ("    " + str(ntry) + " times: " + str(len(junction)) + " junctions.")
                 # end condition
                 if ntry == 100000000:
                     print ("Run Time Error.")
@@ -184,24 +187,60 @@ class SongPair:
         print ("### matrix " + matlabel + " calculate...")
 
         crp_SQ = np.zeros((len(self.crp_R), len(self.crp_R[0])))
+        locstart = [[[]] * len(self.crp_R[0])] * len(self.crp_R)
 
         for i in range(2, len(crp_SQ)):
             for j in range(2, len(crp_SQ[0])):
+
                 if self.crp_R[i][j] == 1:
-                    crp_SQ[i][j] = max(crp_SQ[i-1][j-1], crp_SQ[i-2][j-1], crp_SQ[i-1][j-2]) + 1.0
+                    arglook = [(i-1, j-1), (i-2, j-1), (i-1, j-2)]
+                    look = [crp_SQ[i-1][j-1], crp_SQ[i-2][j-1], crp_SQ[i-1][j-2]]
+
+                    max_ = max(look)
+                    crp_SQ[i][j] = max_ + 1.0
+
+                    for list_ in np.argwhere(look == max_):
+                        x, y = arglook[int(list_[0])]
+
+                        if locstart[i][j]:
+                            locstart[i][j] = locstart[x][y]
+                        else:
+                            locstart[i][j].append((x, y))
                 else:
-                    crp_SQ[i][j] = max(0,
+                    arglook = [(None, None), (i-1, j-1), (i-2, j-1), (i-1, j-2)]
+                    look = [0,
                     crp_SQ[i-1][j-1] - (gamma_o if self.crp_R[i-1][j-1] == 1 else gamma_e),
                     crp_SQ[i-2][j-1] - (gamma_o if self.crp_R[i-2][j-1] == 1 else gamma_e),
-                    crp_SQ[i-1][j-2] - (gamma_o if self.crp_R[i-1][j-2] == 1 else gamma_e))
+                    crp_SQ[i-1][j-2] - (gamma_o if self.crp_R[i-1][j-2] == 1 else gamma_e)]
+
+                    max_ = max(look)
+                    crp_SQ[i][j] = max_
+
+                    for list_ in np.argwhere(look == max_):
+                        if np.argwhere(look == max_)[0] == 0 and len(np.argwhere(look == max_)) == 0:
+                            locstart[x][y] = []
+                        else:
+                            x, y = arglook[int(list_[0])]
+                            if locstart[i][j]:
+                                locstart[i][j] = locstart[x][y]
+                            else:
+                                locstart[i][j].append((x, y))
+
+            if i % 500 == 0:
+                print (str(i) + "/" + str(len(crp_SQ)))
+
 
         SQmax = crp_SQ.max()
 
+        segstarts = []
         segends = []
         for list_ in np.argwhere(crp_SQ == SQmax):
-            segends.append((list_[0], list_[1]))
+            x, y = list_
+            if locstart[x][y] not in segstarts:
+                segstarts.append((locstart[x][y]))
+            segends.append((x, y))
 
-        segstarts = self.findsegstartSQ(self.crp_R, crp_SQ, SQmax, segends, gamma_o, gamma_e)
+        #segstarts = self.findsegstartSQ(self.crp_R, crp_SQ, SQmax, segends, gamma_o, gamma_e)
 
 
         print matlabel + "max: " + str(SQmax)
