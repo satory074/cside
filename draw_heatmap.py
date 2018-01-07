@@ -1,3 +1,4 @@
+# coding: utf-8
 import librosa.display
 
 import numpy as np
@@ -125,8 +126,8 @@ def draw(list_, xlabel=None, ylabel=None,
 
     axes = specshow(data, x_axis='time', y_axis='time', cmap='Blues')
 
-    plt.xlabel(xlabel)
-    plt.ylabel(ylabel)
+    plt.xlabel(xlabel.decode('utf-8'))
+    plt.ylabel(ylabel.decode('utf-8'))
     #axes.set_xlabel('[sec]')
     #axes.set_ylabel('[sec]')
     plt.colorbar()
