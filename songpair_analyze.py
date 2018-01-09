@@ -19,7 +19,7 @@ class SongPair:
         self.crp_R = self._calc_R(self.song1.htr, self.song2.h, cpr)
 
         if 'l' in matrices:
-            self.crp_L, self.Lmax, self.segstarts_L, self.segends_L = self._calc_L()
+            self.crp_L, self.Lmax, self.segstart_L, self.segends_L = self._calc_L()
         else:
             self.crp_L = []
             self.Lmax = None
@@ -208,19 +208,19 @@ class SongPair:
                             locstart[i][j].append((x, y))
                 else:
                     arglook = [(None, None), (i-1, j-1), (i-2, j-1), (i-1, j-2)]
-                    look = [0,
+                    look = np.array([0,
                     crp_SQ[i-1][j-1] - (gamma_o if self.crp_R[i-1][j-1] == 1 else gamma_e),
                     crp_SQ[i-2][j-1] - (gamma_o if self.crp_R[i-2][j-1] == 1 else gamma_e),
-                    crp_SQ[i-1][j-2] - (gamma_o if self.crp_R[i-1][j-2] == 1 else gamma_e)]
+                    crp_SQ[i-1][j-2] - (gamma_o if self.crp_R[i-1][j-2] == 1 else gamma_e)])
 
                     max_ = max(look)
                     crp_SQ[i][j] = max_
 
-                    for list_ in np.argwhere(look == max_):
-                        if np.argwhere(look == max_)[0] == 0 and len(np.argwhere(look == max_)) == 0:
-                            locstart[x][y] = []
+                    for index in np.where(look == max_)[0]:
+                        if np.where(look == max_)[0][0] == 0:
+                            locstart[i][j] = []
                         else:
-                            x, y = arglook[int(list_[0])]
+                            x, y = arglook[index]
                             if locstart[i][j]:
                                 locstart[i][j] = locstart[x][y]
                             else:
