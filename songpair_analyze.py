@@ -108,6 +108,8 @@ class SongPair:
         print
         return crp_L, Lmax
 
+
+    "legacy find start point of segment algorythm"
     def findsegstartSQ(self, crp_R, crp_SQ, SQmax, segends, gamma_o, gamma_e):
         print ("######find SQstart...")
         segstarts = [] # segment start points
@@ -186,12 +188,14 @@ class SongPair:
         matlabel = 'S' if gamma_o == float("inf") else 'Q'
         print ("### matrix " + matlabel + " calculate...")
 
-        crp_SQ = np.zeros((len(self.crp_R), len(self.crp_R[0])))
-        locstart = [[[]] * len(self.crp_R[0])] * len(self.crp_R)
+        rrow, rcol = np.shape(self.crp_R)
 
-        for i in range(2, len(crp_SQ)):
-            for j in range(2, len(crp_SQ[0])):
+        crp_SQ = np.zeros((rrow, rcol))
+        #locstart = [[[]] * len(crp_R[0])] * len(crp_R)
+        locstart = [[[] for i2 in range(rcol)] for i1 in range(rrow)]
 
+        for i in range(2, rrow):
+            for j in range(2, rcol):
                 if self.crp_R[i][j] == 1:
                     arglook = [(i-1, j-1), (i-2, j-1), (i-1, j-2)]
                     look = [crp_SQ[i-1][j-1], crp_SQ[i-2][j-1], crp_SQ[i-1][j-2]]
@@ -199,45 +203,41 @@ class SongPair:
                     max_ = max(look)
                     crp_SQ[i][j] = max_ + 1.0
 
-                    for list_ in np.argwhere(look == max_):
-                        x, y = arglook[int(list_[0])]
-
-                        if locstart[i][j]:
+                    if max_ == 1.0:
+                        locstart[i][j].append((i, j))
+                    else:
+                        for index in np.where(look == max_)[0]:
+                            x, y = arglook[index]
                             locstart[i][j] = locstart[x][y]
-                        else:
-                            locstart[i][j].append((x, y))
                 else:
                     arglook = [(None, None), (i-1, j-1), (i-2, j-1), (i-1, j-2)]
-                    look = np.array([0,
+                    look = [0,
                     crp_SQ[i-1][j-1] - (gamma_o if self.crp_R[i-1][j-1] == 1 else gamma_e),
                     crp_SQ[i-2][j-1] - (gamma_o if self.crp_R[i-2][j-1] == 1 else gamma_e),
-                    crp_SQ[i-1][j-2] - (gamma_o if self.crp_R[i-1][j-2] == 1 else gamma_e)])
+                    crp_SQ[i-1][j-2] - (gamma_o if self.crp_R[i-1][j-2] == 1 else gamma_e)]
 
                     max_ = max(look)
                     crp_SQ[i][j] = max_
 
-                    for index in np.where(look == max_)[0]:
-                        if np.where(look == max_)[0][0] == 0:
-                            locstart[i][j] = []
-                        else:
+                    if max_ == 0.0:
+                        locstart[i][j] = []
+                    else:
+                        for index in np.where(look == max_)[0]:
                             x, y = arglook[index]
-                            if locstart[i][j]:
-                                locstart[i][j] = locstart[x][y]
-                            else:
-                                locstart[i][j].append((x, y))
+                            locstart[i][j] = locstart[x][y]
 
             if i % 500 == 0:
-                print (str(i) + "/" + str(len(crp_SQ)))
-
-
-        SQmax = crp_SQ.max()
+                print (str(i) + "/" + str(rrow))
 
         segstarts = []
         segends = []
+        SQmax = crp_SQ.max()
+
         for list_ in np.argwhere(crp_SQ == SQmax):
             x, y = list_
-            if locstart[x][y] not in segstarts:
-                segstarts.append((locstart[x][y]))
+            for start_ in locstart[x][y]:
+                if start_ not in segstarts:
+                    segstarts.append(start_)
             segends.append((x, y))
 
         #segstarts = self.findsegstartSQ(self.crp_R, crp_SQ, SQmax, segends, gamma_o, gamma_e)
