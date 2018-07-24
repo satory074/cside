@@ -8,46 +8,8 @@ import scipy.signal
 import cqt
 import melody_extraction as meloext
 
-def locmax(vec, indices=False):
-    """
-    Return a boolean vector of which points in vec are local maxima.
-    End points are peaks if larger than single neighbors.
-    if indices=True, return the indices of the True values instead of the boolean vector.
-    """
-    nbr = np.zeros(len(vec)+1, dtype=bool)
-    nbr[0] = True
-    nbr[1:-1] = np.greater_equal(vec[1:], vec[-1])
-    maxmask = (nbr[:-1] & ~nbr[1:])
-
-    if indices:
-        return np.nonzero(maxmask)[0]
-    else:
-        return maxmask
-
-# DENSITY controls the density of landmarks found (approx DENSITY per sec)
-DENSITY = 20.0
-# OVERSAMP > 1 tries to generate extra landmarks by decaying faster
-OVERSAMP = 1
-N_FFT = 512
-N_HOP = 256
-# spectrogram enhancement
-HPF_POLE = 0.98
-
 class Song:
-    # optimaization: cache pre-calculated Gaussian profile
-    __sp_width = None
-    __sp_len = None
-    __sp_vals = []
-
     def __init__(self, path, feature, is_extract, is_decompose):
-        self.density = DENSITY
-        self.n_fft = N_FFT
-        self.n_hop = N_HOP
-        #how wide to spread peaks
-        self.f_sd = 30.0
-        # Maximum number of local maxima to keep per frame
-        self.maxpksperframe = 50
-
         self.path = path
         self.feature = feature
         self.filename = (os.path.splitext(path)[0]).split("/")[-1]
