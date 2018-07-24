@@ -9,6 +9,7 @@ options:
     -e, --extract                        Do melody extract
     -f <feature>, --feature <feature>    Used for features that generate CRP [default: chroma]
     -m [mat], --matrices [mat]           List of matrices to be calculated. [default: q]
+    -o <oti>, --oti <oti>
     -r <rate>, --rate <rate>             How much rate of CRP plots [default: 0.1]
     --help                               Show this help message and exit
 """
@@ -29,8 +30,9 @@ def main(argv):
 
     paths = [args['<path1>'], args['<path2>']]
 
+    # feature
     feature = args['--feature']
-    flist = ['chroma', 'cqt', 'mfcc', 'peak']
+    flist = ['chroma', 'cqt']
     if feature not in flist:
         print ("Undefined feature.")
         exit()
@@ -50,18 +52,19 @@ def main(argv):
 
     is_extract = args['--extract']
     is_decompose = args['--decompose']
+    oti = int(args['--oti'])
 
-    songpair = songpair_analyze.SongPair(paths, feature, cpr, matrices, is_extract, is_decompose)
+    songpair = songpair_analyze.SongPair(paths, feature, cpr, matrices, is_extract, is_decompose, oti)
 
-    draw_heatmap.draw(songpair.crp_R, xlabel=songpair.song2.filename, ylabel=songpair.song1.filename,
-                        x_axis='time', y_axis='time')
+    #draw_heatmap.draw(songpair.crp_R, xlabel=songpair.song2.filename, ylabel=songpair.song1.filename,
+    #                    x_axis='time', y_axis='time')
 
     output = [songpair.song1.filename, len(songpair.crp_R), songpair.song2.filename, len(songpair.crp_R[0]),
             songpair.oti, feature, cpr, is_decompose, is_extract,
             songpair.Lmax, songpair.segstarts_L, songpair.segends_L,
             songpair.Smax, songpair.segstarts_S, songpair.segends_S,
             songpair.Qmax, songpair.segstarts_Q, songpair.segends_Q]
-    f = open("output/" + songpair.filename + '.txt', 'w')
+    f = open("output/segdata/" + songpair.filename + '.txt', 'w')
     for x in output:
         f.write(str(x) + "\n")
     f.close()
