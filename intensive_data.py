@@ -4,7 +4,7 @@ import pandas as pd
 import sys
 
 
-def main(path):
+def main(path="output/segdata/"):
     files = glob.glob(path + '/*.txt')
 
     data = []
@@ -21,7 +21,7 @@ def main(path):
             'Lmax', 'segstarts_L', 'segends_L',
             'Smax', 'segstarts_S', 'segends_S',
             'Qmax', 'segstarts_Q', 'segends_Q'])
-    df.to_csv("data.csv", index=False)
+    df.to_csv("output/intensive/kumikyokuAdur1.csv")
 
 if __name__ == '__main__':
     main(sys.argv[1])

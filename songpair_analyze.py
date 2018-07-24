@@ -4,13 +4,14 @@ import numpy as np
 import song_analyze
 
 class SongPair:
-    def __init__(self, paths, feature, cpr, matrices, is_extract, is_decompose):
+    def __init__(self, paths, feature, cpr, matrices, is_extract, is_decompose, oti):
         self.song1 = song_analyze.Song(paths[0], feature, is_extract, is_decompose)
         self.song2 = song_analyze.Song(paths[1], feature, is_extract, is_decompose)
         self.filename = self.song1.filename + "_" + self.song2.filename
 
         #self.oti = self._calcOTI(self.song1.g, self.song2.g)
-        self.oti = 0
+        self.oti = oti
+        print(self.oti)
 
         self.song1.htr = np.roll(self.song1.h, self.oti, axis=0)
         print
@@ -74,7 +75,9 @@ class SongPair:
         smm = []
         for n1 in X1.T:
             row = []
+            n1 = np.where(n1 == np.max(n1), np.max(n1), 0.0)
             for n2 in X2.T:
+                n2 = np.where(n2 == np.max(n2), np.max(n2), 0.0)
                 row.append(np.linalg.norm((n2 - n1), ord=1))
             smm.append(row)
 
@@ -233,6 +236,16 @@ class SongPair:
         segends = []
         SQmax = crp_SQ.max()
 
+        Qmaxlist = []
+        for row in crp_SQ:
+            Qmaxlist.append(max(row))
+        print(len(Qmaxlist))
+        f = open("output/Qmaxlist/" + self.filename + '.txt', 'w')
+        for x in Qmaxlist:
+            f.write(str(x) + "\n")
+        f.close()
+
+
         for list_ in np.argwhere(crp_SQ == SQmax):
             x, y = list_
             for start_ in locstart[x][y]:
@@ -244,7 +257,10 @@ class SongPair:
 
 
         print matlabel + "max: " + str(SQmax)
-        print matlabel + "start: " + str(segstarts)
+        #print matlabel + "start: " + str(segstarts)
         print matlabel + "end: " + str(segends)
         print
         return crp_SQ, SQmax, segstarts, segends
+
+    def illustrate_matrix(self):
+        import matplotlib as plt
