@@ -7,25 +7,21 @@ usage: muse_de_form.py (<path1> <path2>) [options]
 options:
     -d, --decompose                      Decompose an audio time series into harmonic and percussive components.
     -e, --extract                        Do melody extract
-    -f <feature>, --feature <feature>    Used for features that generate CRP [default: chroma]
+    -f <feature>, --feature <feature>    Used for features that generate CRP [default: cqt]
     -o <oti>, --oti <oti>
     --help                               Show this help message and exit
 """
 
 from docopt import docopt
-from scipy import stats
-import librosa.display
-import numpy as np
-import os
 import sys
 
 import draw_heatmap
 import songpair_analyze
 
-
 def main(argv):
     args = docopt(__doc__)
 
+    # path
     paths = [args['<path1>'], args['<path2>']]
 
     # feature
@@ -46,9 +42,7 @@ def main(argv):
 
     output = [songpair.song1.filename, len(songpair.crp_R), songpair.song2.filename, len(songpair.crp_R[0]),
             songpair.oti, feature,
-#            songpair.Lmax, songpair.segstarts_L, songpair.segends_L,
-#            songpair.Smax, songpair.segstarts_S, songpair.segends_S,
-            songpair.Qmax, songpair.segstarts_Q, songpair.segends_Q]
+            songpair.Qmax, songpair.segends_Q]
     f = open("output/segdata/" + songpair.filename + '.txt', 'w')
     for x in output:
         f.write(str(x) + "\n")

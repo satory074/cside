@@ -12,7 +12,7 @@ import scipy.fftpack
 
 def chroma_cqt(y=None, sr=22050, C=None, hop_length=512, fmin=0, fmax=83,
                norm=np.inf, threshold=0.0, tuning=None, n_chroma=12,
-               n_octaves=7, window=None, bins_per_octave=None, tempo=None, lwintype=None):
+               n_octaves=7, window=None, bins_per_octave=None, tempo=None, lwintype=None, feature='cqt'):
     r'''Constant-Q chromagram
 
     Parameters
@@ -58,12 +58,22 @@ def chroma_cqt(y=None, sr=22050, C=None, hop_length=512, fmin=0, fmax=83,
         Number of bins per octave in the CQT.
         Default: matches `n_chroma`
 
+    tempo : float
+        hoge
+
+    lwintype : note or None
+        hoge
+
+    feature : chroma or cqt
+        hoge
+
     Returns
     -------
     chromagram : np.ndarray [shape=(n_chroma, t)]
         The output chromagram
 
     '''
+    spb = int(((60 / tempo) * (sr / float(hop_length))) * 0.5) #samples per beat
 
     if bins_per_octave is None:
         bins_per_octave = n_chroma
@@ -83,9 +93,6 @@ def chroma_cqt(y=None, sr=22050, C=None, hop_length=512, fmin=0, fmax=83,
 
     # window
     if lwintype == 'note':
-        spb = int(((60 / tempo) * (sr / float(hop_length))) * 0.5)
-        print (spb)
-
         start = 0
         end = spb
         C_ = []
@@ -97,16 +104,16 @@ def chroma_cqt(y=None, sr=22050, C=None, hop_length=512, fmin=0, fmax=83,
 
         C = np.array(C_).T
 
-    # Map to chroma
-    #cq_to_chr = librosa.filters.cq_to_chroma(C.shape[0],
-    #                                 bins_per_octave=bins_per_octave,
-    #                                 n_chroma=n_chroma,
-    #                                 window=window)
-    #chroma = cq_to_chr.dot(C)
+    if feature == 'chroma':
+        # Map to chroma
+        cq_to_chr = librosa.filters.cq_to_chroma(C.shape[0],
+                                         bins_per_octave=bins_per_octave,
+                                         n_chroma=n_chroma,
+                                         window=window)
+        chroma = cq_to_chr.dot(C)
     chroma = C
 
     # threshold
-    spb = (60 / tempo) * (sr / hop_length) # nsamples per beat
     nplots = int(chroma.shape[1] / (spb / 2.0))
 
     sortedlist = np.sort(chroma.reshape(-1,))[::-1]
