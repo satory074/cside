@@ -14,14 +14,14 @@ class Song:
         self.h, self.g = self._path2g(feature)
 
     def _path2g(self, feature):
-        print ("\t### Load {}...".format(self.filename))
+        print ("### Load {}...".format(self.filename))
 
         # extract chroma
         y, sr = librosa.load(self.path)
 
         onset_env = librosa.onset.onset_strength(y, sr=sr)
         tempo = librosa.beat.tempo(onset_envelope=onset_env, sr=sr, start_bpm=180)
-        print("\t\ttempo: {}".format(float(tempo)))
+        print("\ttempo: {}".format(float(tempo)))
 
         y_harmonic, y_percussive = librosa.effects.hpss(y)
         h = cqt.chroma_cqt(y=y_harmonic, sr=sr, tempo=tempo, lwintype='note', threshold=0.0, feature=feature)

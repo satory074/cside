@@ -4,15 +4,15 @@ import numpy as np
 import song_analyze
 
 class SongPair:
-    def __init__(self, paths, feature, oti=0):
-        print ("### Load songs")
-        self.song1 = song_analyze.Song(paths[0], feature)
-        self.song2 = song_analyze.Song(paths[1], feature)
+    def __init__(self, medley, songpath, feature, oti=0):
+        self.song1 = medley
+        self.song2 = song_analyze.Song(songpath, feature)
         self.filename = self.song1.filename + "_" + self.song2.filename
 
+        self.feature = feature
         #self.oti = self._calcOTI(self.song1.g, self.song2.g)
-        self.oti = oti
-        print("OTI: {}".format(self.oti))
+        self.oti = int(oti)
+        print("\tOTI: {}".format(self.oti))
         self.song1.h = np.roll(self.song1.h, self.oti, axis=0)
 
         self.crp_R = self._calc_R(self.song1.h, self.song2.h)
@@ -38,7 +38,7 @@ class SongPair:
         return np.array(calc_mat)
 
     def _calc_R(self, X1, X2, cpr=0.1):
-        print ("### Calculate matrix R...")
+        print ("\t### Calculate matrix R...")
 
         crp_R = []
         smm = []
@@ -52,13 +52,13 @@ class SongPair:
         row, col = rhev.shape
         for i in range(row):
             crp_R.append([rhev[i][j] * chev[j][i] for j in range(col)])
-            if i % 500 == 0: print ("\t{}/{}".format(i, row))
+            if i % 500 == 0: print ("\t\t{}/{}".format(i, row))
 
-        return crp_R
+        return np.array(crp_R)
         #return crp_R[::-1]
 
     def _calc_Q(self, ga_o=5.0, ga_e=0.5):
-        print ("### Calculate matrix Q...")
+        print ("\t### Calculate matrix Q...")
 
         row, col = np.shape(self.crp_R)
         crp_Q = np.zeros((row, col))
@@ -73,18 +73,14 @@ class SongPair:
                     look = [0, eq(i-1, j-1), eq(i-2, j-1), eq(i-1, j-2)]
                     crp_Q[i][j] = max(look)
 
-            if i % 500 == 0: print("\t{}/{}".format(i, row))
+            if i % 500 == 0: print("\t\t{}/{}".format(i, row))
 
         Qmax = crp_Q.max()
         Qmaxlist = [max(row) for row in crp_Q]
         segends = [tuple(list_) for list_ in np.argwhere(crp_Q == Qmax)]
 
-        #f = open("output/Qmaxlist/{}.txt".format(self.filename), 'w')
-        #f.write("{}\n".format([x for x in Qmaxlist]))
-        #f.close()
-
         print ("\tQmax: {}".format(Qmax))
-        print ("\tQmax end: {}".format(segends))
+        #print ("\tQmax end: {}".format(segends))
 
         return crp_Q, Qmax, Qmaxlist, segends
 
