@@ -6,17 +6,17 @@ import pandas as pd
 import scipy.signal
 
 import cqt
-import melody_extraction as meloext
+#import melody_extraction as meloext
 
 class Song:
-    def __init__(self, path, feature, is_extract, is_decompose):
+    def __init__(self, path, feature):
         self.path = path
         self.feature = feature
         self.filename = (os.path.splitext(path)[0]).split("/")[-1]
-        self.h, self.g = self._path2g(feature, is_extract, is_decompose)
+        self.h, self.g = self._path2g(feature)
         self.htr = self.h
 
-    def _path2g(self, feature, is_extract, is_decompose):
+    def _path2g(self, feature):
         print ("### " + self.filename + " load...")
 
         # extract chroma
@@ -31,10 +31,6 @@ class Song:
 
         ha_sum = np.sum(chroma_cqt, axis=1)
         g = ha_sum / np.max(ha_sum)
-
-        if is_extract:
-            h = meloext.extract(y, sr, is_decompose)
-            return h, g
 
         if feature == 'chroma':
             h = chroma_cqt

@@ -17,7 +17,7 @@ def main(path="output/segdata/"):
         data.append(list_)
     df = pd.DataFrame(data,
     columns=['Name', 'length', 'Name', 'length',
-            'OTI', 'Feature', 'CRPrate', 'is_decompose', 'is_extract',
+            'OTI', 'Feature', 'is_decompose', 'is_extract',
             'Lmax', 'segstarts_L', 'segends_L',
             'Smax', 'segstarts_S', 'segends_S',
             'Qmax', 'segstarts_Q', 'segends_Q'])

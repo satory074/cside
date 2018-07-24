@@ -43,12 +43,7 @@ def hz2midi(hz):
 
     return midi
 
-def extract(y, sr, is_decompose):
-    #y, sr = librosa.load(path, mono=True)
-    if is_decompose:
-        y_harmonic, y_percussive = librosa.effects.hpss(y)
-        y = y_harmonic
-
+def extract(y, sr):
     melody = vamp.collect(y, sr, "mtg-melodia:melodia",
                         parameters={"voicing": 2.0})
 

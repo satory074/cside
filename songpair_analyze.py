@@ -4,9 +4,11 @@ import numpy as np
 import song_analyze
 
 class SongPair:
-    def __init__(self, paths, feature, cpr, matrices, is_extract, is_decompose, oti):
-        self.song1 = song_analyze.Song(paths[0], feature, is_extract, is_decompose)
-        self.song2 = song_analyze.Song(paths[1], feature, is_extract, is_decompose)
+    def __init__(self, paths, feature, oti):
+        self.CPR = 0.1 # CRP plot rate
+
+        self.song1 = song_analyze.Song(paths[0], feature)
+        self.song2 = song_analyze.Song(paths[1], feature)
         self.filename = self.song1.filename + "_" + self.song2.filename
 
         #self.oti = self._calcOTI(self.song1.g, self.song2.g)
@@ -16,33 +18,13 @@ class SongPair:
         self.song1.htr = np.roll(self.song1.h, self.oti, axis=0)
         print
 
-        print "[" + self.song1.filename + "][" + self.song2.filename + "]"
-        self.crp_R = self._calc_R(self.song1.htr, self.song2.h, cpr)
+        print ("[{}]-[{}]".format(self.song1.filename, self.song2.filename))
 
-        if 'l' in matrices:
-            self.crp_L, self.Lmax, self.segstart_L, self.segends_L = self._calc_L()
-        else:
-            self.crp_L = []
-            self.Lmax = None
-            self.segstarts_L = None
-            self.segends_L = None
+        self.crp_R = self._calc_R(self.song1.htr, self.song2.h, self.CPR)
 
-        if 's' in matrices:
-            self.crp_S, self.Smax, self.segstarts_S, self.segends_S = self._calc_SQ()
-        else:
-            self.crp_S = []
-            self.Smax = None
-            self.segstarts_S = None
-            self.segends_S = None
-
-        if 'q' in matrices:
-            self.crp_Q, self.Qmax, self.segstarts_Q, self.segends_Q = self._calc_SQ(gamma_o=5.0, gamma_e=0.5)
-        else:
-            self.crp_Q = []
-            self.Qmax = None
-            self.segstarts_Q = None
-            self.segends_Q = None
-
+        #self.crp_L, self.Lmax, self.segstart_L, self.segends_L = self._calc_L()
+        #self.crp_S, self.Smax, self.segstarts_S, self.segends_S = self._calc_SQ()
+        self.crp_Q, self.Qmax, self.segstarts_Q, self.segends_Q = self._calc_SQ(gamma_o=5.0, gamma_e=0.5)
 
     def _calcOTI(self, ga, gb):
         oti = 0
