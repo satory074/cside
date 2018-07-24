@@ -19,9 +19,7 @@ class SongPair:
         print ("[{}]-[{}]".format(self.song1.filename, self.song2.filename))
 
         self.crp_R = self._calc_R(self.song1.htr, self.song2.h, self.CPR)
-        #self.crp_L, self.Lmax, self.segends_L = self._calc_L()
-        #self.crp_S, self.Smax, self.segends_S = self._calc_SQ()
-        self.crp_Q, self.Qmax, self.segends_Q = self._calc_SQ(gamma_o=5.0, gamma_e=0.5)
+        self.crp_Q, self.Qmax, self.segends_Q = self._calc_Q()
 
     def _calcOTI(self, ga, gb):
         oti = 0
@@ -76,71 +74,40 @@ class SongPair:
 
         return crp_R
 
-    def _calc_L(self):
-        print ("### matrix L calculate...")
-        crp_L = np.array(self.crp_R)
-        crp_L[:,:] = 0
-
-        for i in range(1, len(crp_L)):
-            for j in range(1, len(crp_L[0])):
-                crp_L[i][j] = crp_L[i-1][j-1] + 1 if self.crp_R[i][j] == 1 else 0
-
-        Lmax = int(crp_L.max())
-        print "Lmax: " + str(Lmax)
-        print
-        return crp_L, Lmax
-
-    def _calc_SQ(self, gamma_o=float("inf"), gamma_e=float("inf")):
+    def _calc_Q(self, gamma_o=5.0, gamma_e=0.5):
         matlabel = 'S' if gamma_o == float("inf") else 'Q'
-        print ("### matrix " + matlabel + " calculate...")
+        print ("### Calculate matrix S...")
 
         rrow, rcol = np.shape(self.crp_R)
 
-        crp_SQ = np.zeros((rrow, rcol))
-        #locstart = [[[]] * len(crp_R[0])] * len(crp_R)
-        locstart = [[[] for i2 in range(rcol)] for i1 in range(rrow)]
+        crp_Q = np.zeros((rrow, rcol))
 
         for i in range(2, rrow):
             for j in range(2, rcol):
                 if self.crp_R[i][j] == 1:
                     arglook = [(i-1, j-1), (i-2, j-1), (i-1, j-2)]
-                    look = [crp_SQ[i-1][j-1], crp_SQ[i-2][j-1], crp_SQ[i-1][j-2]]
+                    look = [crp_Q[i-1][j-1], crp_Q[i-2][j-1], crp_Q[i-1][j-2]]
 
                     max_ = max(look)
-                    crp_SQ[i][j] = max_ + 1.0
-
-                    if max_ == 1.0:
-                        locstart[i][j].append((i, j))
-                    else:
-                        for index in np.where(look == max_)[0]:
-                            x, y = arglook[index]
-                            locstart[i][j] = locstart[x][y]
+                    crp_Q[i][j] = max_ + 1.0
                 else:
                     arglook = [(None, None), (i-1, j-1), (i-2, j-1), (i-1, j-2)]
                     look = [0,
-                    crp_SQ[i-1][j-1] - (gamma_o if self.crp_R[i-1][j-1] == 1 else gamma_e),
-                    crp_SQ[i-2][j-1] - (gamma_o if self.crp_R[i-2][j-1] == 1 else gamma_e),
-                    crp_SQ[i-1][j-2] - (gamma_o if self.crp_R[i-1][j-2] == 1 else gamma_e)]
+                    crp_Q[i-1][j-1] - (gamma_o if self.crp_R[i-1][j-1] == 1 else gamma_e),
+                    crp_Q[i-2][j-1] - (gamma_o if self.crp_R[i-2][j-1] == 1 else gamma_e),
+                    crp_Q[i-1][j-2] - (gamma_o if self.crp_R[i-1][j-2] == 1 else gamma_e)]
 
                     max_ = max(look)
-                    crp_SQ[i][j] = max_
-
-                    if max_ == 0.0:
-                        locstart[i][j] = []
-                    else:
-                        for index in np.where(look == max_)[0]:
-                            x, y = arglook[index]
-                            locstart[i][j] = locstart[x][y]
+                    crp_Q[i][j] = max_
 
             if i % 500 == 0:
                 print (str(i) + "/" + str(rrow))
 
-        segstarts = []
         segends = []
-        SQmax = crp_SQ.max()
+        Qmax = crp_Q.max()
 
         Qmaxlist = []
-        for row in crp_SQ:
+        for row in crp_Q:
             Qmaxlist.append(max(row))
         print(len(Qmaxlist))
         f = open("output/Qmaxlist/" + self.filename + '.txt', 'w')
@@ -149,17 +116,14 @@ class SongPair:
         f.close()
 
 
-        for list_ in np.argwhere(crp_SQ == SQmax):
+        for list_ in np.argwhere(crp_Q == Qmax):
             x, y = list_
-            for start_ in locstart[x][y]:
-                if start_ not in segstarts:
-                    segstarts.append(start_)
             segends.append((x, y))
 
-        print matlabel + "max: " + str(SQmax)
+        print matlabel + "max: " + str(Qmax)
         print matlabel + "end: " + str(segends)
         print
-        return crp_SQ, SQmax, segstarts, segends
+        return crp_Q, Qmax, segends
 
     def illustrate_matrix(self):
         import matplotlib as plt
