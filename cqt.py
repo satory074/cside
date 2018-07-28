@@ -73,7 +73,9 @@ def chroma_cqt(y=None, sr=22050, C=None, hop_length=512, fmin=0, fmax=83,
         The output chromagram
 
     '''
-    spb = int(((60 / tempo) * (sr / float(hop_length))) * 0.5) #samples per beat
+    spb = ((60 / tempo) * (sr / float(hop_length))) * 0.5 #samples per beat
+    print (spb)
+    spb = int(spb)
 
     if bins_per_octave is None:
         bins_per_octave = n_chroma
@@ -103,6 +105,7 @@ def chroma_cqt(y=None, sr=22050, C=None, hop_length=512, fmin=0, fmax=83,
             end += spb
 
         C = np.array(C_).T
+        # TODO: nslide
 
     if feature == 'chroma':
         # Map to chroma
@@ -111,13 +114,15 @@ def chroma_cqt(y=None, sr=22050, C=None, hop_length=512, fmin=0, fmax=83,
                                          n_chroma=n_chroma,
                                          window=window)
         chroma = cq_to_chr.dot(C)
-    chroma = C
+    #chroma = C
 
     # threshold
-    nplots = int(chroma.shape[1] / (spb / 2.0))
+    nplots = int(chroma.shape[1] / (spb / 4.0))
+    print (nplots)
 
     sortedlist = np.sort(chroma.reshape(-1,))[::-1]
     threshold = sortedlist[nplots]
+    #threshold = 0.0
 
     chroma[chroma < threshold] = 0.0
 

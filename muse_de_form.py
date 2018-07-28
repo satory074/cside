@@ -27,7 +27,7 @@ def load_oti(path):
     otilist = []
     with open(path) as f:
         for d in f.readlines():
-            otilist.append(tuple(d.split(',')))
+            otilist.append(tuple(d.split(', ')))
 
     return otilist
 
@@ -42,7 +42,12 @@ def save_data(songpairs):
     'oti', 'feature','Qmax',
     #'segends_Q'
     ])
+    #d = ["name"]
+    d = []
+    for i in np.arange(len(songpairs[0].Qmaxlist)):
+        d.append(str(i))
     qmax = []
+    index = []
     id = 0
     for songpair in songpairs:
         id += 1
@@ -56,11 +61,13 @@ def save_data(songpairs):
                         #songpair.segends_Q
                         ]
         qmax.append(songpair.Qmaxlist)
+        index.append(songpair.song2.filename)
 
     data.to_csv("output/intensive/{}.csv".format(songpair.song1.filename))
-    with open("output/Qmaxlist/{}.csv".format(songpair.song1.filename), 'w') as f:
-        writer = csv.writer(f, lineterminator='\n')
-        writer.writerows(qmax)
+    pd.DataFrame(qmax, index=index).to_csv("output/Qmaxlist/{}.csv".format(songpair.song1.filename))
+    #with open("output/Qmaxlist/{}.csv".format(songpair.song1.filename), 'w') as f:
+    #    writer = csv.writer(f, lineterminator='\n')
+    #    writer.writerows(qmax)
 
 
 def main(argv):

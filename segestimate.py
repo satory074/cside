@@ -1,78 +1,47 @@
+"""
+hoge
+
+usage: segestimate.py (<outputdir>) [options]
+
+options:
+    -n <num>   Used for features that generate CRP [default: 32]
+    --help     Show this help message and exit
+"""
+
+
+from docopt import docopt
 import librosa
 import numpy as np
 import os
-import re
+import pandas as pd
 import sys
 
+import calc_accuracy
+
 class ComponentSong:
-    def __init__(self, id, name, dir):
-        self.id = id
-        self.name = name
-        self.dir = dir
-
-        self.qmaxlist = self._load_qmaxlist(name)
-
-    def _load_qmaxlist(self, name):
-
-        qmaxlist = []
-        f = open(self.dir)
-        lines = f.readlines()
-        f.close()
-
-        qmaxlist = [float(line) for line in lines]
-
-        return np.array(qmaxlist)
+    def __init__(self, row):
+        self.name = row[0]
+        self.qmaxlist = np.array([i for i in row[1:]])
 
     def calc_qtotal(self, start, end):
         list_ = self.qmaxlist[start:end]
-        sum = np.sum((np.roll(list_, -1) - list_)[:-1])
-
-        return sum
+        return np.sum((np.roll(list_, -1) - list_)[:-1])
 
 
 def path2complist(path):
     complist = []
-    id = 0
-
-    print
-    print ("### LOAD ###")
-    for file in os.listdir(path):
-        name, ext = os.path.splitext(file)
-
-        if ext == '.txt':
-            print(file)
-
-            complist.append(ComponentSong(id, name, (path + '/' + file)))
-            id += 1
-    print
+    df = pd.read_csv(path)
+    for i in range(df.shape[0]):
+        complist.append(ComponentSong(np.array(df.loc[i])))
 
     return complist
 
-def load_medley(path):
-    y, sr = librosa.load(path)
-    onset_env = librosa.onset.onset_strength(y, sr=sr)
-    tempo = librosa.beat.tempo(onset_envelope=onset_env, sr=sr, start_bpm=180)
-
-    return y, sr, float(tempo)
-
-
-def main(dir, path):
-    complist = path2complist(dir)
-    nframe = len(complist[0].qmaxlist)
-
-    y, sr, tempo = load_medley(path)
-
-    HOP_LENGTH = 512.0
-    SEG_LENGTH = 4.0 # bar
-
-    spb = int((60 / tempo) * (sr / HOP_LENGTH)) # nsamples per beat
-
-    nslide = int(spb * SEG_LENGTH)
+def estimate(nslide, complist):
     start = 0
-    #end = nslide
-    end = 8 * 2
+    end = nslide
     results_id = []
     results_val = []
+    nframe = len(complist[0].qmaxlist)
 
     while end < nframe:
         qtotals = np.array([comp.calc_qtotal(start, end) for comp in complist])
@@ -81,11 +50,20 @@ def main(dir, path):
         results_id.append(np.argmax(qtotals))
 
         start = end
-        #end += nslide
-        end += 8 * 2
+        end += nslide
 
-    for id in results_id:
-        print (complist[id].name)
+    estlist = [complist[id].name for id in results_id]
+    [print(name) for name in estlist]
+
+    return estlist
+
+
+def main(argv):
+    args = docopt(__doc__)
+    dir = args['<outputdir>']
+    nslide = int(args['-n']) # n helf note
+
+    calc_accuracy.calc(dir, nslide, estimate(nslide, path2complist(dir)))
 
 if __name__ == '__main__':
-    main(sys.argv[1], sys.argv[2])
+    main(sys.argv)

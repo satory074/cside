@@ -1,6 +1,7 @@
 # coding: utf-8
 import numpy as np
 
+import draw_heatmap
 import song_analyze
 
 class SongPair:
@@ -16,6 +17,8 @@ class SongPair:
         self.song1.h = np.roll(self.song1.h, self.oti, axis=0)
 
         self.crp_R = self._calc_R(self.song1.h, self.song2.h)
+        #draw_heatmap.draw(self.crp_R, xlabel="", ylabel="")
+        #exit()
         self.crp_Q, self.Qmax, self.Qmaxlist, self.segends_Q = self._calc_Q()
 
     def _calcOTI(self, ga, gb):
@@ -45,6 +48,8 @@ class SongPair:
         for n1 in X1.T:
             #n1 = np.where(n1 == np.max(n1), np.max(n1), 0.0)
             smm.append([np.linalg.norm((n2 - n1), ord=1) for n2 in X2.T])
+        #draw_heatmap.draw(smm, xlabel="", ylabel="")
+        #exit()
 
         rhev = self._calchev(smm, cpr)
         chev = self._calchev(np.array(smm).T, cpr)

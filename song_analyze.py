@@ -21,10 +21,21 @@ class Song:
 
         onset_env = librosa.onset.onset_strength(y, sr=sr)
         tempo = librosa.beat.tempo(onset_envelope=onset_env, sr=sr, start_bpm=180)
-        print("\ttempo: {}".format(float(tempo)))
+        print("\ttempo: {}".format(tempo))
 
         y_harmonic, y_percussive = librosa.effects.hpss(y)
-        h = cqt.chroma_cqt(y=y_harmonic, sr=sr, tempo=tempo, lwintype='note', threshold=0.0, feature=feature)
+        h = cqt.chroma_cqt(y=y_harmonic, sr=sr, tempo=tempo, lwintype='note', threshold=0.0, feature=feature,
+        fmin=24, fmax=72
+        )
+
+        #import matplotlib.pyplot as plt
+        #librosa.display.specshow(librosa.amplitude_to_db(h, ref=np.max),
+        #                      sr=sr, x_axis='time', y_axis='cqt_note')
+        #plt.colorbar(format='%+2.0f dB')
+        #plt.title('{}-Constant-Q power spectrum'.format(self.filename))
+        #plt.tight_layout()
+        #plt.show()
+        #exit()
 
         ha_sum = np.sum(h, axis=1)
         g = ha_sum / np.max(ha_sum)
