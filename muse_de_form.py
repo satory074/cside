@@ -5,8 +5,6 @@ Music Segments Detector for Medley
 usage: muse_de_form.py (<medley> <songdir>) [options]
 
 options:
-    -d, --decompose                      Decompose an audio time series into harmonic and percussive components.
-    -e, --extract                        Do melody extract
     -f <feature>, --feature <feature>    Used for features that generate CRP [default: cqt]
     -o <oti>, --oti <oti> [default: 0]
     --help                               Show this help message and exit

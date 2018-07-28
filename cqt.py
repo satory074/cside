@@ -12,7 +12,7 @@ import scipy.fftpack
 
 def chroma_cqt(y=None, sr=22050, C=None, hop_length=512, fmin=0, fmax=83,
                norm=np.inf, threshold=0.0, tuning=None, n_chroma=12,
-               n_octaves=7, window=None, bins_per_octave=None, tempo=None, lwintype=None, feature='cqt'):
+               n_octaves=7, window=None, bins_per_octave=None, tempo=None,  feature='cqt'):
     r'''Constant-Q chromagram
 
     Parameters
@@ -61,9 +61,6 @@ def chroma_cqt(y=None, sr=22050, C=None, hop_length=512, fmin=0, fmax=83,
     tempo : float
         hoge
 
-    lwintype : note or None
-        hoge
-
     feature : chroma or cqt
         hoge
 
@@ -92,20 +89,6 @@ def chroma_cqt(y=None, sr=22050, C=None, hop_length=512, fmin=0, fmax=83,
     # fmin, fmax
     C[:fmin] = 0.0
     C[fmax:] = 0.0
-
-    # window
-    if lwintype == 'note':
-        start = 0
-        end = spb
-        C_ = []
-        while end < C.shape[1]:
-            C_.append(np.sum(C[:, start:end], axis=1))
-
-            start = end
-            end += spb
-
-        C = np.array(C_).T
-        # TODO: nslide
 
     if feature == 'chroma':
         # Map to chroma

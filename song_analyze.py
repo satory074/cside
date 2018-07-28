@@ -24,7 +24,7 @@ class Song:
         print("\ttempo: {}".format(tempo))
 
         y_harmonic, y_percussive = librosa.effects.hpss(y)
-        h = cqt.chroma_cqt(y=y_harmonic, sr=sr, tempo=tempo, lwintype='note', threshold=0.0, feature=feature,
+        h = cqt.chroma_cqt(y=y_harmonic, sr=sr, tempo=tempo, threshold=0.0, feature=feature,
         fmin=24, fmax=72
         )
 
