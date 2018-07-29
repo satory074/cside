@@ -10,11 +10,10 @@ options:
 
 
 from docopt import docopt
-import librosa
-import numpy as np
-import os
-import pandas as pd
 import sys
+import numpy as np
+import pandas as pd
+
 
 import calc_accuracy
 

@@ -1,33 +1,31 @@
 # coding: utf-8
+import itertools as it
 import numpy as np
 
 import draw_heatmap
-import song_analyze
+import song_analyze as songanal
 
 class SongPair:
-    def __init__(self, medley, songpath, feature, oti=0):
-        self.song1 = medley
-        self.song2 = song_analyze.Song(songpath, feature)
-        self.filename = self.song1.filename + "_" + self.song2.filename
+    def __init__(self, medley, songpath, feature, lwin, oti):
+        self.medley = medley
+        self.song = songanal.Song(path=songpath, feature=feature)
+        self.filename = "{}_{}".format(self.medley.name, self.song.name)
 
-        self.feature = feature
         #self.oti = self._calcOTI(self.song1.g, self.song2.g)
-        self.oti = int(oti)
-        print("\tOTI: {}".format(self.oti))
-        self.song1.h = np.roll(self.song1.h, self.oti, axis=0)
+        self.medley.h = np.roll(self.medley.h, oti, axis=0)
 
-        self.crp_R = self._calc_R(self.song1.h, self.song2.h)
-        #draw_heatmap.draw(self.crp_R, xlabel="", ylabel="")
-        #exit()
-        self.crp_Q, self.Qmax, self.Qmaxlist, self.segends_Q = self._calc_Q()
+        self.R = self._calc_R(self.medley, self.song, lwin)
+        self.Q, self.Qmaxlist, self.segends_Q = self._calc_Q(self.R)
+        exit()
 
     def _calcOTI(self, ga, gb):
-        # TODO: CQT processing
         csgb = gb
         dots = []
         for i in range(12):
             dots.append(np.dot(ga, csgb))
             csgb = np.roll(csgb, -1)
+
+        #print("\tOTI: {}".format(np.argmax(dots)))
 
         return np.argmax(dots)
 
@@ -40,54 +38,50 @@ class SongPair:
 
         return np.array(calc_mat)
 
-    def _calc_R(self, X1, X2, cpr=0.1):
+    def _cnglwin(self, smm, tempo, lwin, sr=22050, hop_length=512.):
+        spb = lambda x: ((60 / x) * (sr / hop_length)) * lwin #samples per beat
+        tempox, tempoy = tempo
+        xslide = spb(tempox)
+        yslide = spb(tempoy)
+
+        smm_note = []
+        #print (smm[1:5, 1:5])
+
+        print (np.array(smm).shape)
+        print (xslide, yslide, lwin)
+        return smm
+
+    def _calc_R(self, medley, song, lwin, cpr=0.1):
         print ("\t### Calculate matrix R...")
+        
+        matshape = (medley.len_, song.len_)
+        tempo = (medley.tempo, song.tempo)
 
-        crp_R = []
-        smm = []
-        for n1 in X1.T:
-            #n1 = np.where(n1 == np.max(n1), np.max(n1), 0.0)
-            smm.append([np.linalg.norm((n2 - n1), ord=1) for n2 in X2.T])
-        #draw_heatmap.draw(smm, xlabel="", ylabel="")
-        #exit()
+        smm = np.array([np.linalg.norm((vecm-vecs), ord=1) \
+                for vecm, vecs in it.product(medley.h.T, song.h.T)])
+        smm = np.reshape(smm, matshape)
+        smm_note = self._cnglwin(smm, tempo, lwin)
+        R = self._calchev(smm, cpr) * self._calchev(smm.T, cpr).T
 
-        rhev = self._calchev(smm, cpr)
-        chev = self._calchev(np.array(smm).T, cpr)
-
-        row, col = rhev.shape
-        for i in range(row):
-            crp_R.append([rhev[i][j] * chev[j][i] for j in range(col)])
-            if i % 500 == 0: print ("\t\t{}/{}".format(i, row))
-
-        return np.array(crp_R)
+        return np.reshape(R, matshape)
         #return crp_R[::-1]
 
-    def _calc_Q(self, ga_o=5.0, ga_e=0.5):
+    def _calc_Q(self, R, ga_o=5.0, ga_e=0.5):
         print ("\t### Calculate matrix Q...")
 
-        row, col = np.shape(self.crp_R)
-        crp_Q = np.zeros((row, col))
-        for i in range(2, row):
-            for j in range(2, col):
-                if self.crp_R[i][j] == 1:
-                    look = [crp_Q[i-1][j-1], crp_Q[i-2][j-1], crp_Q[i-1][j-2]]
-                    crp_Q[i][j] = max(look) + 1.0
-                else:
-                    eq = lambda x, y: \
-                        crp_Q[x][y] - (ga_o if self.crp_R[x][y] == 1 else ga_e)
-                    look = [0, eq(i-1, j-1), eq(i-2, j-1), eq(i-1, j-2)]
-                    crp_Q[i][j] = max(look)
+        row, col = np.shape(R)
+        Q = np.zeros((row, col))
+        for i, j in it.product(range(2, row), range(2, col)):
+            if R[i][j] == 1:
+                Q[i][j] = max([Q[i-1][j-1], Q[i-2][j-1], Q[i-1][j-2]]) + 1.0
+            else:
+                eq = lambda x, y: Q[x][y] - (ga_o if R[x][y] == 1 else ga_e)
+                Q[i][j] = max([0, eq(i-1, j-1), eq(i-2, j-1), eq(i-1, j-2)])
 
-            if i % 500 == 0: print("\t\t{}/{}".format(i, row))
+        Qmaxlist = [max(row) for row in Q]
+        segends = [tuple(list_) for list_ in np.argwhere(Q == Q.max())]
 
-        Qmax = crp_Q.max()
-        Qmaxlist = [max(row) for row in crp_Q]
-        segends = [tuple(list_) for list_ in np.argwhere(crp_Q == Qmax)]
-
-        print ("\tQmax: {}".format(Qmax))
+        print ("\tQmax: {}".format(Q.max()))
         #print ("\tQmax end: {}".format(segends))
 
-        return crp_Q, Qmax, Qmaxlist, segends
-
-    def illustrate_matrix(self):
-        import matplotlib as plt
+        return Q, Qmaxlist, segends

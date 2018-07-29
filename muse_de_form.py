@@ -6,20 +6,17 @@ usage: muse_de_form.py (<medley> <songdir>) [options]
 
 options:
     -f <feature>, --feature <feature>    Used for features that generate CRP [default: cqt]
-    -o <oti>, --oti <oti> [default: 0]
+    -l <len>, --length <len>             number of half notes [default: 0.5]
     --help                               Show this help message and exit
 """
 
-import csv
 from docopt import docopt
-import numpy as np
-import os
-import pandas as pd
 import sys
+import numpy as np
+import pandas as pd
 
-import draw_heatmap
-import song_analyze
-import songpair_analyze
+import song_analyze as songanal
+import songpair_analyze as pairanal
 
 def load_oti(path):
     otilist = []
@@ -49,39 +46,37 @@ def save_data(songpairs):
     id = 0
     for songpair in songpairs:
         id += 1
-        data.loc[id] = [songpair.song1.filename,
-                        songpair.crp_R.shape[0],
-                        songpair.song2.filename,
-                        songpair.crp_R.shape[1],
+        data.loc[id] = [songpair.medley.name,
+                        songpair.R.shape[0],
+                        songpair.song.name,
+                        songpair.R.shape[1],
                         songpair.oti,
                         songpair.feature,
-                        songpair.Qmax,
+                        songpair.Q.max(),
                         #songpair.segends_Q
                         ]
         qmax.append(songpair.Qmaxlist)
-        index.append(songpair.song2.filename)
+        index.append(songpair.song.filename)
 
-    data.to_csv("output/intensive/{}.csv".format(songpair.song1.filename))
-    pd.DataFrame(qmax, index=index).to_csv("output/Qmaxlist/{}.csv".format(songpair.song1.filename))
-    #with open("output/Qmaxlist/{}.csv".format(songpair.song1.filename), 'w') as f:
-    #    writer = csv.writer(f, lineterminator='\n')
-    #    writer.writerows(qmax)
-
+    data.to_csv("output/intensive/{}.csv".format(songpair.medley.name))
+    pd.DataFrame(qmax, index=index).to_csv("output/Qmaxlist/{}.csv".format(songpair.song.name))
 
 def main(argv):
     args = docopt(__doc__)
     medpath, dir = [args['<medley>'], args['<songdir>']]
     feature = args['--feature']
-    if args['--oti'] is not None: oti = int(args['--oti'])
-    print ("[feature] {}\n".format(feature))
+    lwin = args['--length']
+    print ("[feature] {}\n[lwin] {}\n".format(feature, lwin))
 
-    songpairs = []
-    medley = song_analyze.Song(medpath, feature)
-    for name, oti in load_oti("{}oti.txt".format(dir)):
-        print
-        songpairs.append(
-            songpair_analyze.SongPair(medley, (dir + name), feature, oti)
-        )
+    medley = songanal.Song(path=medpath, feature=feature)
+    songpairs = [pairanal.SongPair( \
+        medley=medley,
+        songpath=(dir+name),
+        feature=feature,
+        lwin=float(lwin),
+        oti=int(oti)) \
+        for name, oti in load_oti("{}oti.txt".format(dir) \
+    )]
     save_data(songpairs)
 
 if __name__ == '__main__':
