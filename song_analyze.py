@@ -18,7 +18,7 @@ class Song:
 
         onset = librosa.onset.onset_strength(y, sr=sr)
         tempo = librosa.beat.tempo(onset_envelope=onset, sr=sr, start_bpm=180)
-        print("\ttempo: {}".format(tempo))
+        #print("\ttempo: {}".format(tempo))
 
         y_harmonic, y_percussive = librosa.effects.hpss(y)
         h = cqt.chroma_cqt(y=y_harmonic, sr=sr,

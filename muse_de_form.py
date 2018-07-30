@@ -33,11 +33,9 @@ def save_data(songpairs):
     #                    x_axis='time', y_axis='time')
 
     data = pd.DataFrame([],
-    columns=['Name', 'length', 'Name', 'length',
-    'oti', 'feature','Qmax',
+    columns=['Name', 'length', 'Name', 'length','Qmax',
     #'segends_Q'
     ])
-    #d = ["name"]
     d = []
     for i in np.arange(len(songpairs[0].Qmaxlist)):
         d.append(str(i))
@@ -47,16 +45,16 @@ def save_data(songpairs):
     for songpair in songpairs:
         id += 1
         data.loc[id] = [songpair.medley.name,
-                        songpair.R.shape[0],
+                        songpair.Q.shape[0],
                         songpair.song.name,
-                        songpair.R.shape[1],
-                        songpair.oti,
-                        songpair.feature,
+                        songpair.Q.shape[1],
+                        #songpair.oti,
+                        #songpair.feature,
                         songpair.Q.max(),
                         #songpair.segends_Q
                         ]
         qmax.append(songpair.Qmaxlist)
-        index.append(songpair.song.filename)
+        index.append(songpair.song.name)
 
     data.to_csv("output/intensive/{}.csv".format(songpair.medley.name))
     pd.DataFrame(qmax, index=index).to_csv("output/Qmaxlist/{}.csv".format(songpair.song.name))

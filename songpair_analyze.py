@@ -16,7 +16,6 @@ class SongPair:
 
         self.R = self._calc_R(self.medley, self.song, lwin)
         self.Q, self.Qmaxlist, self.segends_Q = self._calc_Q(self.R)
-        exit()
 
     def _calcOTI(self, ga, gb):
         csgb = gb
@@ -39,31 +38,33 @@ class SongPair:
         return np.array(calc_mat)
 
     def _cnglwin(self, smm, tempo, lwin, sr=22050, hop_length=512.):
+        print ("\t\t### Change window length...")
         spb = lambda x: ((60 / x) * (sr / hop_length)) * lwin #samples per beat
         tempox, tempoy = tempo
-        xslide = spb(tempox)
-        yslide = spb(tempoy)
+        rhop = int(spb(tempox))
+        chop = int(spb(tempoy))
 
+        row, col = smm.shape
         smm_note = []
-        #print (smm[1:5, 1:5])
+        for i in range(0, row-rhop, rhop):
+            smm_note.append([smm[i:i+rhop+1, j:j+chop+1].min() \
+                for j in range(0, col-chop, chop)])
 
-        print (np.array(smm).shape)
-        print (xslide, yslide, lwin)
-        return smm
+        return np.array(smm_note)
 
     def _calc_R(self, medley, song, lwin, cpr=0.1):
         print ("\t### Calculate matrix R...")
-        
+
         matshape = (medley.len_, song.len_)
         tempo = (medley.tempo, song.tempo)
 
-        smm = np.array([np.linalg.norm((vecm-vecs), ord=1) \
+        from scipy.spatial import distance as dist
+        smm = np.array([dist.euclidean(vecm, vecs) \
                 for vecm, vecs in it.product(medley.h.T, song.h.T)])
         smm = np.reshape(smm, matshape)
         smm_note = self._cnglwin(smm, tempo, lwin)
-        R = self._calchev(smm, cpr) * self._calchev(smm.T, cpr).T
 
-        return np.reshape(R, matshape)
+        return self._calchev(smm_note, cpr) * self._calchev(smm_note.T, cpr).T
         #return crp_R[::-1]
 
     def _calc_Q(self, R, ga_o=5.0, ga_e=0.5):
