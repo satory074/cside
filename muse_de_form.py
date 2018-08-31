@@ -56,16 +56,17 @@ def save_data(songpairs):
         qmax.append(songpair.Qmaxlist)
         index.append(songpair.song.name)
 
-    data.to_csv("output/intensive/{}.csv".format(songpair.medley.name))
-    pd.DataFrame(qmax, index=index).to_csv("output/Qmaxlist/{}.csv".format(songpair.song.name))
+    data.to_csv(f"output/intensive/{songpair.medley.name}.csv")
+    pd.DataFrame(qmax, index=index).to_csv(f"output/Qmaxlist/{songpair.medley.name}")
 
 def main(argv):
     args = docopt(__doc__)
     medpath, dir = [args['<medley>'], args['<songdir>']]
     feature = args['--feature']
     lwin = args['--length']
-    print ("[feature] {}\n[lwin] {}\n".format(feature, lwin))
+    print (f"[feature] {feature}\n[lwin] {lwin}\n")
 
+    from tqdm import tqdm
     medley = songanal.Song(path=medpath, feature=feature)
     songpairs = [pairanal.SongPair( \
         medley=medley,
@@ -73,8 +74,7 @@ def main(argv):
         feature=feature,
         lwin=float(lwin),
         oti=int(oti)) \
-        for name, oti in load_oti("{}oti.txt".format(dir) \
-    )]
+        for name, oti in load_oti(f"{dir}oti.txt")]
     save_data(songpairs)
 
 if __name__ == '__main__':

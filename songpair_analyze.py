@@ -9,7 +9,7 @@ class SongPair:
     def __init__(self, medley, songpath, feature, lwin, oti):
         self.medley = medley
         self.song = songanal.Song(path=songpath, feature=feature)
-        self.filename = "{}_{}".format(self.medley.name, self.song.name)
+        self.filename = f"{self.medley.name}_{self.song.name}"
 
         #self.oti = self._calcOTI(self.song1.g, self.song2.g)
         self.medley.h = np.roll(self.medley.h, oti, axis=0)
@@ -18,14 +18,7 @@ class SongPair:
         self.Q, self.Qmaxlist, self.segends_Q = self._calc_Q(self.R)
 
     def _calcOTI(self, ga, gb):
-        csgb = gb
-        dots = []
-        for i in range(12):
-            dots.append(np.dot(ga, csgb))
-            csgb = np.roll(csgb, -1)
-
-        #print("\tOTI: {}".format(np.argmax(dots)))
-
+        dots = [np.dot(ga, np.roll(gb, -1)) for i in range(12)]
         return np.argmax(dots)
 
     def _calchev(self, mat, cpr):
@@ -38,7 +31,6 @@ class SongPair:
         return np.array(calc_mat)
 
     def _cnglwin(self, smm, tempo, lwin, sr=22050, hop_length=512.):
-        print ("\t\t### Change window length...")
         spb = lambda x: ((60 / x) * (sr / hop_length)) * lwin #samples per beat
         tempox, tempoy = tempo
         rhop = int(spb(tempox))
@@ -53,14 +45,14 @@ class SongPair:
         return np.array(smm_note)
 
     def _calc_R(self, medley, song, lwin, cpr=0.1):
-        print ("\t### Calculate matrix R...")
-
         matshape = (medley.len_, song.len_)
         tempo = (medley.tempo, song.tempo)
 
         from scipy.spatial import distance as dist
-        smm = np.array([dist.euclidean(vecm, vecs) \
-                for vecm, vecs in it.product(medley.h.T, song.h.T)])
+        from tqdm import tqdm
+        size_ = medley.h.T.shape[0] * song.h.T.shape[0]
+        smm = np.array([dist.euclidean(vecm, vecs) for vecm, vecs \
+                in tqdm(it.product(medley.h.T, song.h.T), total=size_)])
         smm = np.reshape(smm, matshape)
         smm_note = self._cnglwin(smm, tempo, lwin)
 
@@ -68,8 +60,6 @@ class SongPair:
         #return crp_R[::-1]
 
     def _calc_Q(self, R, ga_o=5.0, ga_e=0.5):
-        print ("\t### Calculate matrix Q...")
-
         row, col = np.shape(R)
         Q = np.zeros((row, col))
         for i, j in it.product(range(2, row), range(2, col)):
@@ -82,7 +72,7 @@ class SongPair:
         Qmaxlist = [max(row) for row in Q]
         segends = [tuple(list_) for list_ in np.argwhere(Q == Q.max())]
 
-        print ("\tQmax: {}".format(Q.max()))
+        print (f"Qmax: {Q.max()}")
         #print ("\tQmax end: {}".format(segends))
 
         return Q, Qmaxlist, segends

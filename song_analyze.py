@@ -11,7 +11,7 @@ class Song:
 
     def _path2g(self, path, feature):
         import librosa, cqt
-        print ("### Load {}...".format(self.name))
+        print (f"\n### Load {self.name}...")
 
         # extract chroma
         y, sr = librosa.load(path)
@@ -21,9 +21,8 @@ class Song:
         #print("\ttempo: {}".format(tempo))
 
         y_harmonic, y_percussive = librosa.effects.hpss(y)
-        h = cqt.chroma_cqt(y=y_harmonic, sr=sr,
-            tempo=tempo, feature=feature,fmin=24, fmax=72
-        )
+        h = cqt.chroma_cqt(y=y, sr=sr, fmin=12, fmax=48,
+            tempo=tempo, feature=feature)
 
         ha_sum = np.sum(h, axis=1)
         g = ha_sum / np.max(ha_sum)

@@ -8,7 +8,7 @@ warnings.filterwarnings('ignore')
 
 def chroma_cqt(y=None, sr=22050, C=None, hop_length=512, fmin=0, fmax=83,
                norm=np.inf, threshold=0.0, tuning=None, n_chroma=12,
-               n_octaves=7, window=None, bins_per_octave=None, tempo=None,  feature='cqt'):
+               n_octaves=7, window=None, bins_per_octave=None, tempo=1.,  feature='cqt'):
     r'''Constant-Q chromagram
 
     Parameters
@@ -84,6 +84,7 @@ def chroma_cqt(y=None, sr=22050, C=None, hop_length=512, fmin=0, fmax=83,
     C[:fmin] = 0.0
     C[fmax:] = 0.0
 
+    chroma = C
     if feature == 'chroma':
         # Map to chroma
         cq_to_chr = librosa.filters.cq_to_chroma(C.shape[0],
@@ -91,14 +92,13 @@ def chroma_cqt(y=None, sr=22050, C=None, hop_length=512, fmin=0, fmax=83,
                                          n_chroma=n_chroma,
                                          window=window)
         chroma = cq_to_chr.dot(C)
-    #chroma = C
 
     # threshold
-    nplots = int(chroma.shape[1] / (spb / 4.0))
+    nplots = int(chroma.shape[1] / (spb / 2.0))
 
     sortedlist = np.sort(chroma.reshape(-1,))[::-1]
-    threshold = sortedlist[nplots]
-    #threshold = 0.0
+    #threshold = sortedlist[nplots]
+    threshold = 0.0
 
     chroma[chroma < threshold] = 0.0
 
