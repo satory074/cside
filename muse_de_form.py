@@ -7,6 +7,7 @@ usage: muse_de_form.py (<medley> <songdir>) [options]
 options:
     -f <feature>, --feature <feature>    Used for features that generate CRP [default: cqt]
     -l <len>, --length <len>             number of half notes [default: 0.5]
+    -o <oti>, --oti <oti>                OTI [default: 0]
     --help                               Show this help message and exit
 """
 
@@ -61,20 +62,25 @@ def save_data(songpairs):
 
 def main(argv):
     args = docopt(__doc__)
-    medpath, dir = [args['<medley>'], args['<songdir>']]
+    medpath, songpath = [args['<medley>'], args['<songdir>']]
     feature = args['--feature']
     lwin = args['--length']
+    oti = args['--oti']
     print (f"[feature] {feature}\n[lwin] {lwin}\n")
 
-    from tqdm import tqdm
+    import os
     medley = songanal.Song(path=medpath, feature=feature)
-    songpairs = [pairanal.SongPair( \
-        medley=medley,
-        songpath=(dir+name),
-        feature=feature,
-        lwin=float(lwin),
-        oti=int(oti)) \
-        for name, oti in load_oti(f"{dir}oti.txt")]
+    if os.path.isfile(songpath):
+        songpairs = [pairanal.SongPair( \
+        medley=medley, songpath=songpath, feature=feature,
+        lwin=float(lwin), oti=int(oti))]
+    else:
+        save_data(songpairs)
+        songpairs = [pairanal.SongPair( \
+            medley=medley, songpath=(songpath+name), feature=feature,
+            lwin=float(lwin), oti=int(oti)) \
+            for name, oti in load_oti(f"{dir}oti.txt")]
+
     save_data(songpairs)
 
 if __name__ == '__main__':
