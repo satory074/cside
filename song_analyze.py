@@ -1,5 +1,4 @@
 import numpy as np
-#import melody_extraction as meloext
 
 class Song:
     def __init__(self, path, feature):
@@ -18,7 +17,6 @@ class Song:
 
         onset = librosa.onset.onset_strength(y, sr=sr)
         tempo = librosa.beat.tempo(onset_envelope=onset, sr=sr, start_bpm=180)
-        #print("\ttempo: {}".format(tempo))
 
         y_harmonic, y_percussive = librosa.effects.hpss(y)
         h = cqt.chroma_cqt(y=y, sr=sr, fmin=12, fmax=48,

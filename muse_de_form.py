@@ -2,9 +2,11 @@
 """
 Music Segments Detector for Medley
 
-usage: muse_de_form.py (<medley> <songdir>) [options]
+Usage:
+    muse_de_form.py <dir_med> [options]
+    muse_de_form.py (<file_med> <file_song>) [options]
 
-options:
+Options:
     -f <feature>, --feature <feature>    Used for features that generate CRP [default: cqt]
     -l <len>, --length <len>             number of half notes [default: 0.5]
     -o <oti>, --oti <oti>                OTI [default: 0]
@@ -12,7 +14,9 @@ options:
 """
 
 from docopt import docopt
+import os
 import sys
+
 import numpy as np
 import pandas as pd
 
@@ -27,12 +31,7 @@ def load_oti(path):
 
     return otilist
 
-
-
 def save_data(songpairs):
-    #draw_heatmap.draw(songpair.crp_R, xlabel=songpair.song2.filename, ylabel=songpair.song1.filename,
-    #                    x_axis='time', y_axis='time')
-
     data = pd.DataFrame([],
     columns=['Name', 'length', 'Name', 'length','Qmax',
     #'segends_Q'
@@ -61,27 +60,35 @@ def save_data(songpairs):
     pd.DataFrame(qmax, index=index).to_csv(f"output/Qmaxlist/{songpair.medley.name}")
 
 def main(argv):
+    ### args ###
     args = docopt(__doc__)
-    medpath, songpath = [args['<medley>'], args['<songdir>']]
+    dir_med = args['<dir_med>']
+    file_med, file_song = [args['<file_med>'], args['<file_song>']]
     feature = args['--feature']
     lwin = args['--length']
     oti = args['--oti']
-    print (f"[feature] {feature}\n[lwin] {lwin}\n")
 
-    import os
-    medley = songanal.Song(path=medpath, feature=feature)
-    if os.path.isfile(songpath):
-        songpairs = [pairanal.SongPair( \
-        medley=medley, songpath=songpath, feature=feature,
-        lwin=float(lwin), oti=int(oti))]
+    print(f"[feature] {feature}")
+    print(f"[lwin] {lwin}")
+
+    ###  ###
+    if dir_med:
+        file_med = (f"{dir_med}/{os.path.basename(dir_med)}.mp3")
+        medley = songanal.Song(path=file_med, feature=feature)
+        li_songpair = [pairanal.SongPair(medley=medley,
+                                        songpath=(f"{dir_med}/{name}"),
+                                        feature=feature,
+                                        lwin=float(lwin),
+                                        oti=int(oti))
+            for name, oti in load_oti(f"{dir_med}/oti.txt")]
     else:
-        save_data(songpairs)
-        songpairs = [pairanal.SongPair( \
-            medley=medley, songpath=(songpath+name), feature=feature,
-            lwin=float(lwin), oti=int(oti)) \
-            for name, oti in load_oti(f"{dir}oti.txt")]
+        li_songpair = [pairanal.SongPair(medley=file_med,
+                                        songpath=file_song,
+                                        feature=feature,
+                                        lwin=float(lwin),
+                                        oti=int(oti))]
 
-    save_data(songpairs)
+    save_data(li_songpair)
 
 if __name__ == '__main__':
     main(sys.argv)
