@@ -3,9 +3,6 @@
 import librosa
 import numpy as np
 
-import warnings
-warnings.filterwarnings('ignore')
-
 def chroma_cqt(y=None, sr=22050, C=None, hop_length=512, fmin=0, fmax=83,
                norm=np.inf, threshold=0.0, tuning=None, n_chroma=12,
                n_octaves=7, window=None, bins_per_octave=None, tempo=1.,  feature='cqt'):

@@ -1,44 +1,37 @@
-#coding: utf-8
 """
 Music Segments Detector for Medley
 
 Usage:
     muse_de_form.py <dir_med> [options]
-    muse_de_form.py (<file_med> <file_song>) [options]
+    muse_de_form.py (<path_med> <path_song>) [options]
 
 Options:
     -f <feature>, --feature <feature>    Used for features that generate CRP [default: cqt]
     -l <len>, --length <len>             number of half notes [default: 0.5]
-    -o <oti>, --oti <oti>                OTI [default: 0]
     --help                               Show this help message and exit
 """
 
-from docopt import docopt
-import os
 import sys
-
+import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
+from docopt import docopt
+from song_analyze import Song
+from songpair_analyze import SongPair
 
-import song_analyze as songanal
-import songpair_analyze as pairanal
 
-def load_oti(path):
-    otilist = []
+def load_data(path):
     with open(path) as f:
-        for d in f.readlines():
-            otilist.append(tuple(d.split(', ')))
+        li = [tuple(d.split(', ')) for d in f.readlines()]
 
-    return otilist
+    return li
+
 
 def save_data(songpairs):
-    data = pd.DataFrame([],
-    columns=['Name', 'length', 'Name', 'length','Qmax',
-    #'segends_Q'
-    ])
-    d = []
-    for i in np.arange(len(songpairs[0].Qmaxlist)):
-        d.append(str(i))
+    data = pd.DataFrame(
+        [], columns=['Name', 'length', 'Name', 'length','Qmax',]
+    )
+    d = [str(i) for i in np.arange(len(songpairs[0].Qmaxlist))]
     qmax = []
     index = []
     id = 0
@@ -48,10 +41,10 @@ def save_data(songpairs):
                         songpair.Q.shape[0],
                         songpair.song.name,
                         songpair.Q.shape[1],
-                        #songpair.oti,
-                        #songpair.feature,
+                        # songpair.oti,
+                        # songpair.feature,
                         songpair.Q.max(),
-                        #songpair.segends_Q
+                        # songpair.segends_Q
                         ]
         qmax.append(songpair.Qmaxlist)
         index.append(songpair.song.name)
@@ -63,32 +56,31 @@ def main(argv):
     ### args ###
     args = docopt(__doc__)
     dir_med = args['<dir_med>']
-    file_med, file_song = [args['<file_med>'], args['<file_song>']]
+    path_med, path_song = [args['<path_med>'], args['<path_song>']]
     feature = args['--feature']
     lwin = args['--length']
-    oti = args['--oti']
 
     print(f"[feature] {feature}")
     print(f"[lwin] {lwin}")
+    print()
 
     ###  ###
     if dir_med:
-        file_med = (f"{dir_med}/{os.path.basename(dir_med)}.mp3")
-        medley = songanal.Song(path=file_med, feature=feature)
-        li_songpair = [pairanal.SongPair(medley=medley,
-                                        songpath=(f"{dir_med}/{name}"),
-                                        feature=feature,
-                                        lwin=float(lwin),
-                                        oti=int(oti))
-            for name, oti in load_oti(f"{dir_med}/oti.txt")]
+        li_song = [Song(path=f"{dir_med}/{name}", feat=feature)
+                   for name, oti in load_data(f"{dir_med}/data.txt")]
+        li_songpair = [SongPair(med=li_song[0], song=song, lwin=lwin)
+                       for song in li_song[1:]]
     else:
-        li_songpair = [pairanal.SongPair(medley=file_med,
-                                        songpath=file_song,
-                                        feature=feature,
-                                        lwin=float(lwin),
-                                        oti=int(oti))]
+        med = Song(path=path_med, feat=feature)
+        song = Song(path=path_song, feat=feature)
+        li_songpair = [SongPair(med=med, song=song, lwin=lwin)]
 
-    save_data(li_songpair)
+    for sp in li_songpair:
+        plt.plot(np.arange(sp.song1.len_), sp.Qmaxlist, label=sp.song2.name)
+        plt.legend()
+    plt.show()
+
+    #save_data(li_songpair)
 
 if __name__ == '__main__':
     main(sys.argv)

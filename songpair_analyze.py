@@ -1,20 +1,23 @@
 # coding: utf-8
 import itertools as it
 import numpy as np
+from scipy.spatial import distance as dist
+from tqdm import tqdm
 
-import draw_heatmap
-import song_analyze as songanal
 
 class SongPair:
-    def __init__(self, medley, songpath, feature, lwin, oti):
-        self.medley = medley
-        self.song = songanal.Song(path=songpath, feature=feature)
-        self.filename = f"{self.medley.name}_{self.song.name}"
+    def __init__(self, med, song, lwin, oti=0):
+        self.song1 = med
+        self.song2 = song
+        self.filename = f"{self.song1.name}_{self.song2.name}"
+        self.size_ = med.len_ * song.len_
+
+        print(f"\n{self.filename}")
 
         #self.oti = self._calcOTI(self.song1.g, self.song2.g)
-        self.medley.h = np.roll(self.medley.h, oti, axis=0)
+        self.song1.h = np.roll(self.song1.h, oti, axis=0)
 
-        self.R = self._calc_R(self.medley, self.song, lwin)
+        self.R = self._calc_R(self.song1, self.song2, lwin)
         self.Q, self.Qmaxlist, self.segends_Q = self._calc_Q(self.R)
 
     def _calcOTI(self, ga, gb):
@@ -39,8 +42,8 @@ class SongPair:
         row, col = smm.shape
         smm_note = []
         for i in range(0, row-rhop, rhop):
-            smm_note.append([smm[i:i+rhop+1, j:j+chop+1].min() \
-                for j in range(0, col-chop, chop)])
+            smm_note.append([smm[i:i+rhop+1, j:j+chop+1].min()
+                             for j in range(0, col-chop, chop)])
 
         return np.array(smm_note)
 
@@ -48,21 +51,19 @@ class SongPair:
         matshape = (medley.len_, song.len_)
         tempo = (medley.tempo, song.tempo)
 
-        from scipy.spatial import distance as dist
-        from tqdm import tqdm
-        size_ = medley.h.T.shape[0] * song.h.T.shape[0]
-        smm = np.array([dist.euclidean(vecm, vecs) for vecm, vecs \
-                in tqdm(it.product(medley.h.T, song.h.T), total=size_)])
+        smm = np.array([dist.euclidean(vecm, vecs)
+                        for vecm, vecs in tqdm(it.product(medley.h.T, song.h.T), total=self.size_)])
         smm = np.reshape(smm, matshape)
-        smm_note = self._cnglwin(smm, tempo, lwin)
+        # smm_note = self._cnglwin(smm, tempo, lwin)
 
-        return self._calchev(smm_note, cpr) * self._calchev(smm_note.T, cpr).T
-        #return crp_R[::-1]
+        return self._calchev(smm, cpr) * self._calchev(smm.T, cpr).T
+        # return self._calchev(smm_note, cpr) * self._calchev(smm_note.T, cpr).T
+        # return crp_R[::-1]
 
     def _calc_Q(self, R, ga_o=5.0, ga_e=0.5):
         row, col = np.shape(R)
         Q = np.zeros((row, col))
-        for i, j in it.product(range(2, row), range(2, col)):
+        for i, j in tqdm(it.product(range(2, row), range(2, col)), total=self.size_):
             if R[i][j] == 1:
                 Q[i][j] = max([Q[i-1][j-1], Q[i-2][j-1], Q[i-1][j-2]]) + 1.0
             else:
@@ -73,6 +74,8 @@ class SongPair:
         segends = [tuple(list_) for list_ in np.argwhere(Q == Q.max())]
 
         print (f"Qmax: {Q.max()}")
-        #print ("\tQmax end: {}".format(segends))
+        # print ("\tQmax end: {}".format(segends))
 
         return Q, Qmaxlist, segends
+
+

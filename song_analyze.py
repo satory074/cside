@@ -1,28 +1,42 @@
+import os
+import warnings
+import librosa
 import numpy as np
+import audf
+import cqt
+warnings.filterwarnings('ignore')
+
 
 class Song:
-    def __init__(self, path, feature):
-        import os
-
+    def __init__(self, path, feat):
         self.name = os.path.basename(path).split(".")[0]
-        self.h, self.g, self.tempo = self._path2g(path, feature)
-        self.len_ = self.h.shape[1]
+        self.feat = feat
 
-    def _path2g(self, path, feature):
-        import librosa, cqt
-        print (f"\n### Load {self.name}...")
+        print(f"### Load {self.name}...")
+        self.h, self.g, self.tempo = self._audio2feature(self._load_song(path, feat))
+        _, self.len_ = np.shape(self.h)
 
-        # extract chroma
+    def _load_song(self, path, feat):
         y, sr = librosa.load(path)
-
         onset = librosa.onset.onset_strength(y, sr=sr)
-        tempo = librosa.beat.tempo(onset_envelope=onset, sr=sr, start_bpm=180)
+        tempo = librosa.beat.tempo(onset_envelope=onset, sr=sr, start_bpm=180.)
 
-        y_harmonic, y_percussive = librosa.effects.hpss(y)
-        h = cqt.chroma_cqt(y=y, sr=sr, fmin=12, fmax=48,
-            tempo=tempo, feature=feature)
+        return y, sr, float(tempo[0])
 
-        ha_sum = np.sum(h, axis=1)
-        g = ha_sum / np.max(ha_sum)
+    def _audio2feature(self, song_info):
+        y, sr, tempo = song_info
 
-        return h, g, float(tempo)
+        if self.feat == 'cqt':
+            h = cqt.chroma_cqt(
+                y=y, sr=sr, fmin=12, fmax=72, tempo=tempo, feature=self.feat)
+
+            ha_sum = np.sum(h, axis=1)
+            g = ha_sum / np.max(ha_sum)
+
+            return h, g, tempo
+
+        if self.feat == 'audf':
+            audf_ = audf.AudioFingerPrint()
+            fp = audf_.wavfile2peaks(y, sr)
+
+            return fp, None, tempo
