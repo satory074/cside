@@ -19,10 +19,12 @@ Each detected segment is a dict::
     {
         "start": float,           # segment start (seconds)
         "end": float,             # segment end (seconds)
-        "song_id": str,           # top candidate track ID
+        "song_id": str | None,    # top candidate track ID (None if unknown)
         "score": float,           # similarity score
         "is_mashup": bool,        # True when ≥2 candidates score above threshold
-        "mashup_songs": list[str] # all candidates above threshold (mashup case)
+        "mashup_songs": list[str],# all candidates above threshold (mashup case)
+        "is_unknown": bool,       # True when score < unknown_threshold (unregistered song)
+        "score_ratio": float | None  # best_score / mean(all_k_scores); None if index empty
     }
 """
 
@@ -56,6 +58,17 @@ class MedleyDetector:
         E.g. 0.85 means the 2nd candidate must be ≥85% as similar as the best.
     top_k:
         Number of candidates to retrieve per segment.
+    unknown_threshold:
+        Segments whose best cosine similarity score is below this value are
+        flagged as ``is_unknown=True`` (unregistered song).  Defaults to 0.0,
+        which preserves the original behaviour (all segments assigned a song_id).
+        Typical useful values are 0.3–0.5 depending on the embedding space.
+    score_ratio_threshold:
+        If set, segments where ``best_score / mean(all_k_scores)`` is below
+        this value are also flagged as ``is_unknown=True``.  When the ratio is
+        low, all candidates score similarly → no clear match → likely unknown.
+        Defaults to ``None`` (disabled) for backwards compatibility.
+        Typical useful values are 1.2–2.0 depending on the index.
     """
 
     def __init__(
@@ -65,12 +78,16 @@ class MedleyDetector:
         hop_sec: float = 1.0,
         mashup_threshold: float = 0.85,
         top_k: int = 5,
+        unknown_threshold: float = 0.0,
+        score_ratio_threshold: Optional[float] = None,
     ) -> None:
         self.cover_identifier = cover_identifier
         self.boundary_detector = boundary_detector or BoundaryDetector(hop_sec=hop_sec)
         self.hop_sec = hop_sec
         self.mashup_threshold = mashup_threshold
         self.top_k = top_k
+        self.unknown_threshold = unknown_threshold
+        self.score_ratio_threshold = score_ratio_threshold
 
     # ------------------------------------------------------------------
     # Public API
@@ -171,9 +188,33 @@ class MedleyDetector:
                 "score": 0.0,
                 "is_mashup": False,
                 "mashup_songs": [],
+                "is_unknown": True,
+                "score_ratio": None,
             }
 
         best_id, best_score = results[0]
+
+        # Score ratio: best / mean(all_k_scores) — low ratio means no clear winner
+        all_scores = [s for _, s in results]
+        mean_score = float(np.mean(all_scores)) if all_scores else 0.0
+        score_ratio = float(best_score / mean_score) if mean_score > 1e-8 else 0.0
+
+        # Unknown detection: absolute threshold OR ratio threshold
+        is_unknown = best_score < self.unknown_threshold
+        if self.score_ratio_threshold is not None:
+            is_unknown = is_unknown or (score_ratio < self.score_ratio_threshold)
+
+        if is_unknown:
+            return {
+                "start": start_t,
+                "end": end_t,
+                "song_id": None,
+                "score": float(best_score),
+                "is_mashup": False,
+                "mashup_songs": [],
+                "is_unknown": True,
+                "score_ratio": score_ratio,
+            }
 
         # Mashup detection: flag if second candidate is close to best
         mashup_songs = [best_id]
@@ -191,6 +232,8 @@ class MedleyDetector:
             "score": float(best_score),
             "is_mashup": is_mashup,
             "mashup_songs": mashup_songs,
+            "is_unknown": False,
+            "score_ratio": score_ratio,
         }
 
     @staticmethod

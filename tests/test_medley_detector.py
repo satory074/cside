@@ -153,11 +153,13 @@ def test_segment_schema(song_embs, identifier):
     detector = MedleyDetector(identifier, hop_sec=1.0, top_k=4)
     segments = detector.detect_sliding_window(medley, window_sec=10.0, stride_sec=10.0)
 
-    required_keys = {"start", "end", "song_id", "score", "is_mashup", "mashup_songs"}
+    required_keys = {"start", "end", "song_id", "score", "is_mashup", "mashup_songs", "is_unknown", "score_ratio"}
     for seg in segments:
         assert required_keys.issubset(seg.keys())
         assert isinstance(seg["is_mashup"], bool)
         assert isinstance(seg["mashup_songs"], list)
+        assert isinstance(seg["is_unknown"], bool)
+        assert seg["score_ratio"] is None or isinstance(seg["score_ratio"], float)
 
 
 def test_empty_index_returns_none_song_id():
@@ -167,3 +169,71 @@ def test_empty_index_returns_none_song_id():
     medley = np.random.randn(10, DIM).astype(np.float32)
     segments = detector.detect_sliding_window(medley, window_sec=5.0, stride_sec=5.0)
     assert all(s["song_id"] is None for s in segments)
+    assert all(s["is_unknown"] for s in segments)
+
+
+def test_unknown_threshold_flags_low_score():
+    """Segments whose score is below unknown_threshold are flagged is_unknown=True."""
+    rng = np.random.default_rng(99)
+    song_emb = _unit(rng.standard_normal(DIM).astype(np.float32))
+    identifier = _make_identifier({"song_X": song_emb})
+
+    # unknown_threshold=1.0 (maximum cosine similarity) → every segment is unknown
+    detector = MedleyDetector(identifier, hop_sec=1.0, unknown_threshold=1.0)
+    medley = np.random.randn(10, DIM).astype(np.float32)
+    segments = detector.detect_sliding_window(medley, window_sec=5.0, stride_sec=5.0)
+
+    assert all(s["is_unknown"] for s in segments)
+    assert all(s["song_id"] is None for s in segments)
+    assert all(not s["is_mashup"] for s in segments)
+    # score_ratio should be present (not None) since index has one song
+    assert all(s["score_ratio"] is not None for s in segments)
+
+
+def test_unknown_threshold_zero_keeps_song_id(song_embs, identifier):
+    """unknown_threshold=0.0 (default) keeps song_id assigned for matched segments."""
+    medley = _make_medley_embeddings(song_embs, ["song_A"] * 2, frames_per_segment=10)
+    detector = MedleyDetector(identifier, hop_sec=1.0, unknown_threshold=0.0)
+    segments = detector.detect_sliding_window(medley, window_sec=10.0, stride_sec=10.0)
+
+    assert all(not s["is_unknown"] for s in segments)
+    assert all(s["song_id"] is not None for s in segments)
+
+
+def test_score_ratio_threshold_flags_unknown():
+    """score_ratio_threshold flags segments where all candidates score similarly."""
+    rng = np.random.default_rng(7)
+    # Single song in index — query with its own embedding → high ratio (clear winner)
+    song_emb = _unit(rng.standard_normal(DIM).astype(np.float32))
+    identifier = _make_identifier({"song_X": song_emb})
+
+    # Query close to song_X → best score >> mean → ratio should be ~1.0 (all same song)
+    # With top_k=5 and only 1 song, all k results are the same → ratio = best/mean = 1.0
+    detector_known = MedleyDetector(
+        identifier, hop_sec=1.0, top_k=5, score_ratio_threshold=None
+    )
+    medley_known = song_emb[np.newaxis, :].repeat(10, axis=0)
+    segs_known = detector_known.detect_sliding_window(medley_known, window_sec=5.0, stride_sec=5.0)
+    # score_ratio should be present and positive
+    assert all(s["score_ratio"] is not None and s["score_ratio"] > 0.0 for s in segs_known)
+
+    # Now use 4 orthogonal songs in index; query with a random unrelated vector
+    rng2 = np.random.default_rng(13)
+    songs = {f"song_{i}": _unit(rng2.standard_normal(DIM).astype(np.float32)) for i in range(4)}
+    identifier4 = _make_identifier(songs)
+
+    # Random query → scores will be spread across candidates → ratio close to 1.0
+    random_query = _unit(rng2.standard_normal(DIM).astype(np.float32))
+    medley_rand = random_query[np.newaxis, :].repeat(10, axis=0)
+
+    # Without ratio threshold — should NOT be unknown (score > 0.0 default threshold)
+    detector_no_ratio = MedleyDetector(identifier4, hop_sec=1.0, top_k=4, score_ratio_threshold=None)
+    segs_no_ratio = detector_no_ratio.detect_sliding_window(medley_rand, window_sec=10.0, stride_sec=10.0)
+    assert all(not s["is_unknown"] for s in segs_no_ratio)
+
+    # With a very high ratio threshold (e.g., 10.0) — ratio can never exceed this → all unknown
+    detector_ratio = MedleyDetector(identifier4, hop_sec=1.0, top_k=4, score_ratio_threshold=10.0)
+    segs_ratio = detector_ratio.detect_sliding_window(medley_rand, window_sec=10.0, stride_sec=10.0)
+    assert all(s["is_unknown"] for s in segs_ratio)
+    assert all(s["song_id"] is None for s in segs_ratio)
+    assert all(s["score_ratio"] is not None for s in segs_ratio)

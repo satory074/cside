@@ -7,9 +7,9 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ```bash
 uv sync                          # Install all dependencies (core)
 uv sync --extra web              # Install with Gradio webapp extras
-uv run pytest --no-cov           # Run all 29 tests
+uv run pytest --no-cov           # Run all tests
 uv run pytest tests/test_foo.py::test_bar --no-cov  # Run a single test
-uv run ruff check src/ tests/    # Lint
+uv run ruff check src/ tests/    # Lint (line-length=100, rules: E F I UP)
 uv run black src/ tests/         # Format
 ```
 
@@ -57,7 +57,7 @@ Audio → MuQExtractor (1024-dim frame embeddings)
 
 **`segmentation/`**
 - `boundary.py` — `BoundaryDetector`: cosine novelty curve (vectorized via cumulative sums, not a per-frame loop) → Gaussian-smoothed → `scipy.signal.find_peaks`. `MambaBoundaryDetector` is an unimplemented stub.
-- `medley.py` — `MedleyDetector`: `detect()` uses `BoundaryDetector`; `detect_sliding_window()` uses fixed windows. Mashup flag: 2nd-best FAISS score ≥ `mashup_threshold × best_score`.
+- `medley.py` — `MedleyDetector`: `detect()` uses `BoundaryDetector`; `detect_sliding_window()` uses fixed windows. Unknown detection uses two independent conditions (OR logic): absolute threshold (`unknown_threshold`) and ratio test (`score_ratio_threshold`). Mashup flag: 2nd-best FAISS score ≥ `mashup_threshold × best_score`.
 
 **`evaluation/`**
 - `metrics.py` — `frame_level_f1`, `boundary_recall`, `cover_id_recall_at_k`, `evaluate_medley_detection`.
@@ -93,11 +93,17 @@ Tests use 64-dim synthetic embeddings exclusively. To test `CoverIdentifier` wit
 
 ```python
 {
-    "start": float,          # seconds
+    "start": float,              # seconds
     "end": float,
-    "song_id": str | None,   # top match (None if index is empty)
-    "score": float,          # cosine similarity
+    "song_id": str | None,       # top match (None if unknown or empty index)
+    "score": float,              # cosine similarity of best candidate
     "is_mashup": bool,
-    "mashup_songs": list[str]
+    "mashup_songs": list[str],
+    "is_unknown": bool,          # True if score < unknown_threshold OR ratio < score_ratio_threshold
+    "score_ratio": float | None  # best_score / mean(all_k_scores); None only if index is empty
 }
 ```
+
+`is_unknown` logic in `MedleyDetector._identify_segment()`:
+- `(A) best_score < unknown_threshold` — absolute threshold (default 0.0, typical 0.3–0.5)
+- `(B) score_ratio < score_ratio_threshold` — ratio test disabled by default (`None`); when all k candidates score similarly the ratio ≈ 1.0, suggesting no clear match (typical useful values 1.2–2.0)
