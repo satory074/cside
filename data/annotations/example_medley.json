@@ -1,0 +1,42 @@
+{
+  "medley_id": "example_jpop_medley_001",
+  "audio_path": "data/audio/example_jpop_medley_001.mp3",
+  "duration_sec": 180.0,
+  "segments": [
+    {
+      "start": 0.0,
+      "end": 32.5,
+      "song_ids": ["song_A"],
+      "is_mashup": false,
+      "notes": "Intro section, full song A"
+    },
+    {
+      "start": 32.5,
+      "end": 64.0,
+      "song_ids": ["song_B"],
+      "is_mashup": false,
+      "notes": ""
+    },
+    {
+      "start": 64.0,
+      "end": 80.0,
+      "song_ids": ["song_B", "song_C"],
+      "is_mashup": true,
+      "notes": "Song B in verse, song C in chorus simultaneously"
+    },
+    {
+      "start": 80.0,
+      "end": 120.0,
+      "song_ids": ["song_C"],
+      "is_mashup": false,
+      "notes": ""
+    },
+    {
+      "start": 120.0,
+      "end": 180.0,
+      "song_ids": ["song_D"],
+      "is_mashup": false,
+      "notes": "Final section"
+    }
+  ]
+}

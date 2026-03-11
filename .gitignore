@@ -1,0 +1,13 @@
+.venv/
+__pycache__/
+*.pyc
+*.pyo
+.pytest_cache/
+*.egg-info/
+dist/
+build/
+data/embeddings/
+data/indices/
+data/audio/
+*.h5
+firebase-debug.log
