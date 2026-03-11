@@ -37,8 +37,8 @@ AUDIO_EXTS = {".mp3", ".wav", ".flac", ".ogg", ".m4a", ".aac"}
     help="PyTorch device for on-the-fly extraction.",
 )
 @click.option(
-    "--dim", default=768, show_default=True,
-    help="Embedding dimension (768 for raw MuQ).",
+    "--dim", default=1024, show_default=True,
+    help="Embedding dimension (1024 for raw MuQ).",
 )
 @click.option("--verbose", "-v", is_flag=True)
 def main(input_path, embeddings, output, device, dim, verbose):

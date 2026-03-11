@@ -168,7 +168,7 @@ def build_ui() -> gr.Blocks:
         gr.Markdown(
             "# 🎵 CSIDE Medley Detector\n"
             "Detect which songs appear in each segment of a medley using "
-            "[MuQ](https://huggingface.co/m-a-p/MuQ-MuLan) embeddings + FAISS retrieval."
+            "[MuQ](https://huggingface.co/OpenMuQ/MuQ-large-msd-iter) embeddings + FAISS retrieval."
         )
 
         # Shared state: detection result JSON (passed from Detect → Evaluate tab)

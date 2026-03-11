@@ -6,7 +6,7 @@ Pipeline
 2. Store embeddings in an EmbeddingIndex (HNSW).
 3. For a query track, retrieve the k most similar tracks.
 4. Optionally apply a linear projection head (trained with InfoNCE) to
-   map 768-dim → 128-dim before indexing (improves discriminative power).
+   map 1024-dim → 128-dim before indexing (improves discriminative power).
 
 Training support (Phase 3)
 --------------------------
@@ -35,7 +35,7 @@ class CoverIdentifier:
     ----------
     index_dim:
         Dimensionality of vectors stored in the FAISS index.
-        128 when using a projection head, 768 for raw MuQ.
+        128 when using a projection head, 1024 for raw MuQ.
     use_projection:
         If True, apply a trained projection head (Linear 768→128 + L2-norm).
     device:
@@ -278,7 +278,7 @@ class CoverIdentifier:
         import torch.nn as nn
 
         return nn.Sequential(
-            nn.Linear(768, 512),
+            nn.Linear(1024, 512),
             nn.ReLU(),
             nn.Linear(512, 128),
         )

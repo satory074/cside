@@ -27,7 +27,7 @@ def get_demo_identifier(device: Optional[str] = None):
     if not (_DEMO_INDEX_DIR / "cover_index.faiss").exists():
         logger.warning("Demo index not found at %s — returning empty identifier", _DEMO_INDEX_DIR)
         # Return an empty identifier so the UI still works without crashing
-        identifier = CoverIdentifier(index_dim=768, use_projection=False, device=device)
+        identifier = CoverIdentifier(index_dim=1024, use_projection=False, device=device)
         return identifier
 
     return CoverIdentifier.load(_DEMO_INDEX_DIR, device=device)
@@ -55,7 +55,7 @@ def build_from_uploads(
     """
     from cside.retrieval.cover_id import CoverIdentifier
 
-    identifier = CoverIdentifier(index_dim=768, use_projection=False, device=device)
+    identifier = CoverIdentifier(index_dim=1024, use_projection=False, device=device)
 
     n = len(file_paths)
     for i, fp in enumerate(file_paths):

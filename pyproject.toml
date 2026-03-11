@@ -26,6 +26,7 @@ dependencies = [
     "pydantic>=2.7.0",
     "click>=8.1.0",
     "soundfile>=0.12.1",
+    "muq>=0.1.0",
 ]
 
 [project.optional-dependencies]

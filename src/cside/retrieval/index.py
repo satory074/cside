@@ -37,13 +37,13 @@ class EmbeddingIndex:
     Parameters
     ----------
     dim:
-        Dimensionality of the embeddings (768 for MuQ, 128 for projected).
+        Dimensionality of the embeddings (1024 for MuQ, 128 for projected).
     hnsw_m:
         Number of neighbours in the HNSW graph.  Higher → better recall,
         more memory.  Default 32 is a good balance.
     """
 
-    def __init__(self, dim: int = 768, hnsw_m: int = 32) -> None:
+    def __init__(self, dim: int = 1024, hnsw_m: int = 32) -> None:
         self.dim = dim
         self.hnsw_m = hnsw_m
         self._index = None        # lazily created

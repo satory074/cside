@@ -1,10 +1,10 @@
 """MuQ-based audio embedding extractor.
 
-Uses the MuQ-MuLan model (m-a-p/MuQ-MuLan, January 2025) — a music-domain
+Uses the MuQ-large-msd-iter model (OpenMuQ/MuQ-large-msd-iter) — a music-domain
 self-supervised model that outperforms MERT on audio fingerprinting tasks.
 
-The extractor returns frame-level embeddings (T × 768) suitable for:
-- Cover song identification (aggregate → single 768-dim vector)
+The extractor returns frame-level embeddings (T × 1024) suitable for:
+- Cover song identification (aggregate → single 1024-dim vector)
 - Medley segment detection (per-frame similarity queries)
 
 Lazy loading
@@ -24,9 +24,9 @@ import torch
 logger = logging.getLogger(__name__)
 
 # MuQ model identifier on the Hugging Face Hub
-MUQ_MODEL_ID = "m-a-p/MuQ-MuLan"
+MUQ_MODEL_ID = "OpenMuQ/MuQ-large-msd-iter"
 SAMPLE_RATE = 24_000   # MuQ expected sample rate
-EMBED_DIM = 768        # output dimension of last_hidden_state
+EMBED_DIM = 1024       # output dimension of last_hidden_state
 
 
 class MuQExtractor:
@@ -35,7 +35,7 @@ class MuQExtractor:
     Parameters
     ----------
     model_id:
-        HuggingFace model identifier. Defaults to ``m-a-p/MuQ-MuLan``.
+        HuggingFace model identifier. Defaults to ``OpenMuQ/MuQ-large-msd-iter``.
     device:
         PyTorch device string (``"cpu"``, ``"cuda"``, ``"mps"``).
         Auto-detected when not specified.
@@ -53,7 +53,6 @@ class MuQExtractor:
         self.cache_dir = cache_dir
         self._device = device or self._auto_device()
         self._model = None
-        self._extractor = None
 
     # ------------------------------------------------------------------
     # Public API
@@ -74,8 +73,8 @@ class MuQExtractor:
         sr:
             Sample rate of ``audio``.  Resampled to 24 kHz automatically.
         aggregate:
-            If True, return a single mean-pooled vector (shape ``(768,)``).
-            If False, return frame-level embeddings (shape ``(T, 768)``).
+            If True, return a single mean-pooled vector (shape ``(1024,)``).
+            If False, return frame-level embeddings (shape ``(T, 1024)``).
 
         Returns
         -------
@@ -84,20 +83,15 @@ class MuQExtractor:
         self._load_model()
 
         audio_24k = self._resample(audio, sr)
-        inputs = self._extractor(
-            audio_24k,
-            sampling_rate=SAMPLE_RATE,
-            return_tensors="pt",
-        )
-        inputs = {k: v.to(self._device) for k, v in inputs.items()}
+        wav_tensor = torch.tensor(audio_24k).unsqueeze(0).to(self._device)
 
         with torch.no_grad():
-            outputs = self._model(**inputs)
-            embeddings = outputs.last_hidden_state  # (1, T, 768)
+            outputs = self._model(wav_tensor, output_hidden_states=True)
+            embeddings = outputs.last_hidden_state  # (1, T, 1024)
 
-        emb = embeddings[0].cpu().numpy()  # (T, 768)
+        emb = embeddings[0].cpu().numpy()  # (T, 1024)
         if aggregate:
-            return emb.mean(axis=0)  # (768,)
+            return emb.mean(axis=0)  # (1024,)
         return emb
 
     def encode_file(self, path: str | Path, aggregate: bool = False) -> np.ndarray:
@@ -124,17 +118,16 @@ class MuQExtractor:
             return
 
         try:
-            from transformers import AutoFeatureExtractor, AutoModel  # type: ignore
+            from muq import MuQ  # type: ignore
         except ImportError as exc:
             raise ImportError(
-                "transformers is required for MuQ embeddings. "
-                "Install with: uv add transformers torch"
+                "muq is required for MuQ embeddings. "
+                "Install with: uv add muq"
             ) from exc
 
         logger.info("Loading MuQ model from %s …", self.model_id)
         kwargs = {"cache_dir": self.cache_dir} if self.cache_dir else {}
-        self._extractor = AutoFeatureExtractor.from_pretrained(self.model_id, **kwargs)
-        self._model = AutoModel.from_pretrained(self.model_id, **kwargs)
+        self._model = MuQ.from_pretrained(self.model_id, **kwargs)
         self._model.eval()
         self._model.to(self._device)
         logger.info("MuQ model loaded on device: %s", self._device)
