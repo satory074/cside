@@ -35,6 +35,11 @@ dev = [
     "ruff>=0.4.0",
     "black>=24.0.0",
 ]
+web = [
+    "gradio>=4.40.0",
+    "matplotlib>=3.9.0",
+    "Pillow>=10.0.0",
+]
 # gpu = ["faiss-gpu"]  # No Python 3.12 wheels available; install manually if needed
 
 [project.scripts]
