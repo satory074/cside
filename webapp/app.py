@@ -17,9 +17,9 @@ os.environ.setdefault("KMP_DUPLICATE_LIB_OK", "TRUE")
 import gradio as gr
 import pandas as pd
 
-from .index_manager import build_from_uploads, get_demo_identifier
-from .job_runner import run_detection
-from .visualizer import draw_timeline
+from webapp.index_manager import build_from_uploads, get_demo_identifier
+from webapp.job_runner import run_detection
+from webapp.visualizer import draw_timeline
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -164,7 +164,7 @@ def on_evaluate(result_json_output, gt_file):
 # ---------------------------------------------------------------------------
 
 def build_ui() -> gr.Blocks:
-    with gr.Blocks(title="CSIDE Medley Detector", theme=gr.themes.Soft()) as demo:
+    with gr.Blocks(title="CSIDE Medley Detector") as demo:
         gr.Markdown(
             "# 🎵 CSIDE Medley Detector\n"
             "Detect which songs appear in each segment of a medley using "
@@ -231,7 +231,6 @@ def build_ui() -> gr.Blocks:
                         timeline_plot = gr.Image(
                             label="Segment timeline",
                             type="pil",
-                            show_download_button=True,
                         )
                         results_df = gr.Dataframe(
                             label="Detected segments",
@@ -305,4 +304,5 @@ if __name__ == "__main__":
         server_name="0.0.0.0",
         server_port=7860,
         share=False,
+        theme=gr.themes.Soft(),
     )
