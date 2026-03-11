@@ -85,8 +85,19 @@ class EmbeddingIndex:
         embeddings:
             Mapping track_id → embedding array.
         """
-        for track_id, emb in embeddings.items():
-            self.add(track_id, emb)
+        new_ids = [tid for tid in embeddings if tid not in self._track_to_id]
+        if not new_ids:
+            return
+        vecs = np.array([embeddings[tid] for tid in new_ids], dtype=np.float32)
+        norms = np.linalg.norm(vecs, axis=1, keepdims=True)
+        norms = np.maximum(norms, 1e-8)
+        vecs /= norms
+        self._get_index().add(vecs)
+        for tid in new_ids:
+            fid = self._next_id
+            self._id_to_track[fid] = tid
+            self._track_to_id[tid] = fid
+            self._next_id += 1
 
     # ------------------------------------------------------------------
     # Search
@@ -187,10 +198,8 @@ class EmbeddingIndex:
                 raise ImportError(
                     "faiss-cpu (or faiss-gpu) is required. Install with: uv add faiss-cpu"
                 ) from exc
-            # IndexFlatIP: exact inner-product search on L2-normalised vectors
-            # (equivalent to cosine similarity).  For very large indices (>100K tracks)
-            # replace with IndexIVFFlat or IndexHNSWFlat(dim, M) + L2 after normalisation.
-            self._index = faiss.IndexFlatIP(self.dim)
+            self._index = faiss.IndexHNSWFlat(self.dim, self.hnsw_m, faiss.METRIC_INNER_PRODUCT)
+            self._index.hnsw.efSearch = 64
         return self._index
 
     @staticmethod

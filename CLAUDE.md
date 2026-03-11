@@ -48,15 +48,15 @@ Audio → MuQExtractor (1024-dim frame embeddings)
 
 **`features/`**
 - `muq.py` — `MuQExtractor`: wraps `OpenMuQ/MuQ-large-msd-iter` via the `muq` package (`from muq import MuQ`). Lazy-loads on first `.encode()` call. Returns `(T, 1024)` frame embeddings or `(1024,)` mean-pooled. Input is raw 24 kHz audio passed directly as a tensor — **no `AutoFeatureExtractor`** (the model has no `preprocessor_config.json`).
-- `pipeline.py` — `FeaturePipeline`: HDF5 disk caching on top of `MuQExtractor`. Cache key = `sha1(path + mtime + extractor_type)`.
+- `pipeline.py` — `FeaturePipeline`: HDF5 disk caching on top of `MuQExtractor`. Cache key = `sha1(path + mtime + extractor_type)`. No compression (omitted for write speed).
 - `legacy.py` — `LegacyExtractor`: chroma/CQT/MFCC/peak features from the 2019 implementation, kept as a baseline.
 
 **`retrieval/`**
-- `index.py` — `EmbeddingIndex`: thin FAISS wrapper using `IndexFlatIP` (exact cosine similarity via L2-normalised inner product). Saves as `<prefix>.faiss` + `<prefix>.json`.
+- `index.py` — `EmbeddingIndex`: FAISS `IndexHNSWFlat` (O(log N) search, `hnsw_m=32`, `efSearch=64`) with L2-normalised inner product = cosine similarity. Saves as `<prefix>.faiss` + `<prefix>.json`. `add_batch()` bulk-normalizes and bulk-adds for efficiency. **Existing `.faiss` files built with `IndexFlatIP` are incompatible — rebuild with `cside-index`.**
 - `cover_id.py` — `CoverIdentifier`: combines `FeaturePipeline` + `EmbeddingIndex`. Optional trainable projection head (1024 → 128 dim, InfoNCE). When `use_projection=False` or `_projection is None`, embeddings pass through unchanged.
 
 **`segmentation/`**
-- `boundary.py` — `BoundaryDetector`: cosine novelty curve → Gaussian-smoothed → `scipy.signal.find_peaks`. `MambaBoundaryDetector` is an unimplemented stub.
+- `boundary.py` — `BoundaryDetector`: cosine novelty curve (vectorized via cumulative sums, not a per-frame loop) → Gaussian-smoothed → `scipy.signal.find_peaks`. `MambaBoundaryDetector` is an unimplemented stub.
 - `medley.py` — `MedleyDetector`: `detect()` uses `BoundaryDetector`; `detect_sliding_window()` uses fixed windows. Mashup flag: 2nd-best FAISS score ≥ `mashup_threshold × best_score`.
 
 **`evaluation/`**
@@ -81,6 +81,13 @@ Both `torch` and `faiss-cpu` ship their own `libomp.dylib`, causing a fatal dupl
 ### Testing without audio/GPU
 
 Tests use 64-dim synthetic embeddings exclusively. To test `CoverIdentifier` without loading MuQ, instantiate with `use_projection=False` and inject embeddings directly via `identifier._index.add(track_id, emb)`.
+
+## What's NOT Yet Implemented (Stubs)
+
+- `MambaBoundaryDetector` (Phase 4 — requires `mamba-ssm`)
+- SAM Audio source separation (Phase 2 optional)
+- CLaMP 3 multimodal search (Phase 2 optional)
+- Contrastive fine-tuning end-to-end (requires DA-TACOS audio)
 
 ### Segment result schema
 

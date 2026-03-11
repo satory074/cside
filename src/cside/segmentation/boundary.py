@@ -99,13 +99,15 @@ class BoundaryDetector:
         normed = embeddings / norms
 
         c = self.context_frames
-        for i in range(c, T - c):
-            before = normed[max(0, i - c) : i].mean(axis=0)
-            after = normed[i : min(T, i + c)].mean(axis=0)
-            cos_sim = np.dot(before, after) / (
-                np.linalg.norm(before) * np.linalg.norm(after) + 1e-8
-            )
-            novelty[i] = 1.0 - cos_sim
+        # Build sliding window sums via cumulative sum (O(T×D) instead of O(T×c×D))
+        cumsum = np.vstack([np.zeros((1, D)), np.cumsum(normed, axis=0)])  # (T+1, D)
+        i_arr = np.arange(c, T - c)
+        before = (cumsum[i_arr] - cumsum[i_arr - c]) / c          # (N, D)
+        after  = (cumsum[i_arr + c] - cumsum[i_arr]) / c          # (N, D)
+
+        dot = np.sum(before * after, axis=1)                      # (N,)
+        denom = np.linalg.norm(before, axis=1) * np.linalg.norm(after, axis=1) + 1e-8
+        novelty[c : T - c] = 1.0 - dot / denom
 
         # Smooth with a Gaussian kernel
         novelty = scipy.ndimage.gaussian_filter1d(novelty, sigma=2)

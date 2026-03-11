@@ -153,6 +153,6 @@ class FeaturePipeline:
             import h5py  # type: ignore
 
             with h5py.File(self._cache_path(key), "w") as f:
-                f.create_dataset("embedding", data=embedding, compression="gzip")
+                f.create_dataset("embedding", data=embedding)
         except Exception as exc:
             logger.debug("Cache write failed: %s", exc)
