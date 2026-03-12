@@ -64,15 +64,18 @@ Audio → MuQExtractor (1024-dim frame embeddings)
 
 **`data/`**
 - `annotation.py` — Pydantic models `MedleyGroundTruth` / `SegmentLabel`. `to_frame_labels()` converts to per-frame song ID lists.
+- `datasets.py` — `TrackInfo` dataclass + loaders for Covers80 and DA-TACOS benchmarks via `mirdata`. Fallback path for offline/partial downloads.
 
 ### Web app (`webapp/`)
 
 Not an installable package — lives at the project root, not inside `src/cside/`. `launch_webapp.py` adds the project root to `sys.path`.
 
-- `app.py` — Gradio UI and event callbacks (`on_detect`, `on_mode_change`, `on_evaluate`)
+- `app.py` — Gradio UI and event callbacks (`on_detect`, `on_mode_change`, `on_evaluate`). 4 tabs: Detect / Evaluate / Algorithm Walkthrough / 論文.
 - `index_manager.py` — `get_demo_identifier()` (loads pre-built index) / `build_from_uploads()` (indexes user-uploaded audio on-the-fly)
 - `job_runner.py` — `run_detection()`: loads audio → extracts MuQ embeddings → runs `MedleyDetector`. Uses a single-worker `ThreadPoolExecutor` to prevent concurrent OOM.
 - `visualizer.py` — `draw_timeline()`: renders `matplotlib` segment timeline as a PIL image.
+- `algorithm_demo.py` — synthetic visualisations for Tab 3 (no audio/GPU). All functions take slider params and return `PIL.Image`. Uses 64-dim synthetic embeddings with `RNG = np.random.default_rng(42)`.
+- `paper.py` — `PAPER_TEXT` constant: full ISMIR-style Japanese academic paper as Markdown + LaTeX, rendered in Tab 4「論文」.
 
 ### macOS note
 

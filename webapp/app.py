@@ -25,6 +25,7 @@ from webapp.algorithm_demo import (
     make_score_demo,
 )
 from webapp.index_manager import build_from_uploads, get_demo_identifier
+from webapp.paper import PAPER_TEXT
 from webapp.job_runner import run_detection
 from webapp.visualizer import draw_timeline
 
@@ -436,6 +437,12 @@ def build_ui() -> gr.Blocks:
                     )
                     metrics_btn = gr.Button("Run Metrics Demo", variant="secondary")
                     metrics_img = gr.Image(label="Metrics Demo", type="pil")
+
+            # ----------------------------------------------------------------
+            # Tab 4: 論文
+            # ----------------------------------------------------------------
+            with gr.Tab("論文"):
+                gr.Markdown(PAPER_TEXT)
 
         # ----------------------------------------------------------------
         # Wire up events
